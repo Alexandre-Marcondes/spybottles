@@ -1,0 +1,20 @@
+if(!process.env.MONGO_URI) {
+    throw new Error ('MONGO_URI is not defined in .env');
+}
+
+export const config = {
+    mongoUri: process.env.MONGO_URI || '',
+    port: process.env.PORT || 3000,
+    watson: {
+      apiKey: process.env.WATSON_API_KEY || '',
+      url: process.env.WATSON_URL || '',
+    },
+    adminJwtSecret: process.env.ADMIN_JWT_SECRET || 'fallbackAdminSecret',
+    // Add future keys below:
+    // aws: {
+    //   accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    //   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    //   bucketName: process.env.AWS_BUCKET_NAME || '',
+    // },
+  };
+  
