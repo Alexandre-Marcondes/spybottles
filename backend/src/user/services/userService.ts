@@ -1,9 +1,16 @@
+import bcrypt from 'bcrypt';
 import { UserModel } from '../models/userModel';
 import { User } from '../models/userModel';
 
 // Create a new user
 export const createUserService = async (userData: Partial<User>) => {
-  const newUser = new UserModel(userData);
+  if (!userData.password) {
+    throw new Error('Password is required');
+  }
+
+  const hashedPassword = bcrypt.hashSync(userData.password, 10);
+
+  const newUser = new UserModel({...userData, password: hashedPassword, });
   return await newUser.save();
 };
 

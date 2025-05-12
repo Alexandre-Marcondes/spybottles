@@ -15,6 +15,12 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
     const result = await loginUserService({ email, password });
 
+    // Optional soft-delete check
+    if (!result.user.isActive) {
+    res.status(403).json({ message: 'Account is deactivated' });
+    return;
+    }
+
     res.status(200).json(result);
   } catch (err) {
     console.error('Login error:', err);
