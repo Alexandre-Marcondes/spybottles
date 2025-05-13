@@ -3,6 +3,7 @@ dotenv.config();
 
 import express from "express";
 import mongoose from 'mongoose';
+import bodyParser from 'body-parser';
 
 import { swaggerUi, swaggerSpec } from './utils/swagger';
 import mainRoutes from '../src/routes';
@@ -15,6 +16,12 @@ import adminUserRoutes from './admin/routes/adminUserRoutes'
 
 const app = express();
 const PORT = config.port;
+
+// 🔒 Capture raw body for Stripe webhook validation
+app.use(
+  '/v1.0.0/stripe/webhook',
+  bodyParser.raw({ type: 'application/json' })
+);
 
 // Middleware
 app.use(express.json());

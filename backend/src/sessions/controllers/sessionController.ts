@@ -6,6 +6,7 @@ import {
   updateInventorySession,
   deleteInventorySession,
   exportSessionsToExcel,
+  parseVoiceTranscript,
 } from '../services/sessionService';
 import InventorySessionModel, { SessionStatus } from '../models/sessionModel';
 import { inventorySessionSchema } from '../validators/sessionValidator';
@@ -370,5 +371,37 @@ export const exportMonthlyInventory = async (
     console.error('❌ Excel Export Error:', error);
     console.error('Error exporting inventory:', error);
     res.status(500).json({ message: 'Error exporting inventory to Excel' });
+  }
+};
+
+/**
+ * Controller: Parse a transcript into product + quantity
+ */
+export const parseVoiceInput = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const { transcript } = req.body;
+
+    if (!userId || !transcript || typeof transcript !== 'string') {
+      res.status(400).json({ message: 'Invalid request: missing transcript or userId' });
+      return;
+    }
+
+    const result = await parseVoiceTranscript(transcript, userId);
+
+    res.status(200).json({
+      message: 'Parsed successfully',
+      data: result, // includes productId, quantity_full, quantity_partial
+    });
+  } catch (error: any) {
+    if (error.message === 'No matching product found') {
+      res.status(404).json({ message: 'No matching product found' });
+    } else {
+      console.error('❌ Voice parsing failed:', error);
+      res.status(500).json({ message: 'Server error parsing transcript' });
+    }
   }
 };

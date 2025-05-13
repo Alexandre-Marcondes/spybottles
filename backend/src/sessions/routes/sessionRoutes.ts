@@ -1,4 +1,5 @@
 import { authenticate } from '../../middleware/authMiddleware';
+import { restrictIfUnpaid } from '../../middleware/restrictIfUnpaid';
 import { Router } from 'express';
 import {
   startSession,
@@ -8,6 +9,7 @@ import {
   deleteSessionById,
   finalizeSessionById,
   exportMonthlyInventory,
+  parseVoiceInput,
 } from '../controllers/sessionController';
 
 import {
@@ -18,6 +20,7 @@ import {
   SESSION_DELETE_PREFIX,
   SESSION_FINALIZE_PREFIX,
   SESSION_EXPORT_PREFIX,
+  SESSION_PARSE_VOICE_PREFIX,
 } from '../sessionConstants';
 
 const router = Router();
@@ -73,7 +76,10 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.post(SESSION_START_PREFIX, authenticate, startSession);
+router.post(SESSION_START_PREFIX,
+  authenticate,
+  restrictIfUnpaid,
+  startSession);
 
 /**
  * @swagger
@@ -121,7 +127,10 @@ router.get(SESSION_GET_ALL_PREFIX, authenticate, getAllSessions);
  *       500:
  *         description: Server error
  */
-router.get(SESSION_EXPORT_PREFIX, authenticate, exportMonthlyInventory);
+router.get(SESSION_EXPORT_PREFIX,
+  authenticate,
+  restrictIfUnpaid,
+  exportMonthlyInventory);
 
 /**
  * @swagger
@@ -181,7 +190,10 @@ router.get(SESSION_GET_ONE_PREFIX, authenticate, getSessionById);
  *       404:
  *         description: Session not found
  */
-router.put(SESSION_UPDATE_PREFIX, authenticate, updateSessionById);
+router.put(SESSION_UPDATE_PREFIX,
+   authenticate,
+   restrictIfUnpaid,
+   updateSessionById);
 
 /**
  * @swagger
@@ -207,7 +219,10 @@ router.put(SESSION_UPDATE_PREFIX, authenticate, updateSessionById);
  *       404:
  *         description: Session not found
  */
-router.delete(SESSION_DELETE_PREFIX, authenticate, deleteSessionById);
+router.delete(SESSION_DELETE_PREFIX,
+  authenticate,
+  restrictIfUnpaid,
+  deleteSessionById);
 
 /**
  * @swagger
@@ -235,6 +250,41 @@ router.delete(SESSION_DELETE_PREFIX, authenticate, deleteSessionById);
  *       404:
  *         description: Session not found
  */
-router.put(SESSION_FINALIZE_PREFIX, authenticate, finalizeSessionById);
+router.put(SESSION_FINALIZE_PREFIX,
+  authenticate,
+  restrictIfUnpaid,
+  finalizeSessionById);
+
+/**
+ * @swagger
+ * /v1.0.0/session/voice-parse:
+ *   post:
+ *     summary: Parse a voice transcript into product and quantity
+ *     tags:
+ *       - Inventory Sessions
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - transcript
+ *             properties:
+ *               transcript:
+ *                 type: string
+ *                 example: "Grey Goose point eight"
+ *     responses:
+ *       200:
+ *         description: Parsed product and quantity
+ *       400:
+ *         description: Missing or invalid transcript
+ */
+router.post(SESSION_PARSE_VOICE_PREFIX,
+  authenticate,
+  restrictIfUnpaid,
+  parseVoiceInput);
 
 export default router;

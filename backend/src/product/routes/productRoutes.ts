@@ -1,4 +1,5 @@
 import { authenticate } from '../../middleware/authMiddleware';
+import { restrictIfUnpaid } from '../../middleware/restrictIfUnpaid';
 import { Router } from 'express';
 import { 
   addProduct,
@@ -92,7 +93,8 @@ const router = Router();
  */
 router.post(
   PRODUCT_ADD_PREFIX,
-  authenticate, 
+  authenticate,
+  restrictIfUnpaid, 
   validateRequest(productValidationSchema), 
   addProduct);
 
@@ -250,6 +252,7 @@ router.get(
 router.put(
   PRODUCT_UPDATE_PREFIX,
   authenticate,
+  restrictIfUnpaid,
   validateRequest(productValidationSchema),
   updateProductById,
 );
@@ -284,6 +287,7 @@ router.put(
 router.delete(
   PRODUCT_DELETE_PREFIX,
   authenticate,
+  restrictIfUnpaid,
   deleteProductById,
 );
 

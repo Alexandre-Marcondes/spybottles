@@ -1,8 +1,9 @@
 // Import required modules
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 // Interface for Product document structure
 export interface Product extends Document {
+  _id: Types.ObjectId; 
   userId: string; // ✅ NEW: link product to authenticated user
   brand: string;
   variant?: string;

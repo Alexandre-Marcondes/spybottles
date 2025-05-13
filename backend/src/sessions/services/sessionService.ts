@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import InventorySessionModel, { InventorySession, SessionStatus } from '../models/sessionModel';
-import ProductModel from '../../product/models/productModel';
+import  ProductModel, { Product}  from '../../product/models/productModel';
 import { generateTempProductId } from '../../utils/generateTempID';
 import TempProductModel from '../../admin/models/tempProductModel';
 import { SessionItem } from '../models/sessionModel';
@@ -136,35 +136,50 @@ export const getSessionByIdService = async (
 //     { new: true } // return updated document
 //   );
 // };
-
 export const updateInventorySession = async (
   sessionId: string,
   userId: string,
   updates: Partial<InventorySession>
 ): Promise<InventorySession | null> => {
-  // 🔍 Normalize items if present
-  if (updates.items && Array.isArray(updates.items)) {
-    updates.items = updates.items.map((item: any) => {
-      const isMissing = !item.productId;
-      const isTemp =
-        typeof item.productId === 'string' && item.productId.startsWith('temp');
+  const session = await InventorySessionModel.findOne({ _id: sessionId, userId });
 
-      return {
-        productId: isMissing ? generateTempProductId() : item.productId,
-        quantity_full: item.quantity_full,
-        quantity_partial: item.quantity_partial,
-        isTemp: isMissing || isTemp,
-      };
-    });
+  if (!session) return null;
+
+  // 🔁 Merge item updates
+  if (updates.items && Array.isArray(updates.items)) {
+    for (const updateItem of updates.items) {
+      const existingItem = session.items.find(
+        (item) => item.productId.toString() === updateItem.productId
+      );
+
+      if (existingItem) {
+        if (updateItem.quantity_full !== undefined) {
+          existingItem.quantity_full = updateItem.quantity_full;
+        }
+        if (updateItem.quantity_partial !== undefined) {
+          existingItem.quantity_partial = updateItem.quantity_partial;
+        }
+      } else {
+        // If new item (e.g. from speech), add to items[]
+        session.items.push({
+          productId: updateItem.productId || generateTempProductId(),
+          quantity_full: updateItem.quantity_full || 0,
+          quantity_partial: updateItem.quantity_partial || 0,
+          isTemp:
+            !updateItem.productId ||
+            updateItem.productId?.toString().startsWith('temp'),
+        });
+      }
+    }
   }
 
-  // 🧠 Perform the update
-  return await InventorySessionModel.findOneAndUpdate(
-    { _id: sessionId, userId },
-    { $set: updates },
-    { new: true } // return updated session
-  );
+  // ✅ Merge top-level fields (e.g., notes, location)
+  if (updates.notes) session.notes = updates.notes;
+  if (updates.location) session.location = updates.location;
+
+  return await session.save();
 };
+
 
 /**
  * Service to delete a session by ID and user
@@ -256,4 +271,56 @@ export const exportSessionsToExcel = async (
   // 6. Generate and return as ArrayBuffer
   const buffer = await workbook.xlsx.writeBuffer();
   return buffer as unknown as ArrayBuffer;
+};
+
+
+/**
+ * Parses a voice transcript to extract productId and quantity
+ */
+
+export const parseVoiceTranscript = async (
+  transcript: string,
+  userId: string
+): Promise<{
+  productId: string;
+  quantity_full: number;
+  quantity_partial: number;
+}> => {
+  const cleaned = transcript.trim().toLowerCase();
+
+  let quantity_full = 0;
+  let quantity_partial = 0;
+
+  // ✅ Extract full units like "12 bottles" or "12 full"
+  const fullMatch = cleaned.match(/(\d+)\s?(bottles?|full)?/);
+  if (fullMatch && fullMatch[1]) {
+    quantity_full = parseInt(fullMatch[1], 10);
+  }
+
+  // ✅ Extract partial units like "point eight" or "0.8"
+  const partialMatch = cleaned.match(/point\s?(\d)|(\d\.\d)/);
+  if (partialMatch) {
+    const raw = partialMatch[1] || partialMatch[2];
+    const parsed = parseFloat(`0.${raw}`);
+    if (!isNaN(parsed)) quantity_partial = parsed;
+  }
+
+  // ✅ Match product (brand + variant separately)
+  const products: Product[] = await ProductModel.find({ userId });
+
+  const matchedProduct = products.find((p) => {
+    const brand = p.brand?.toLowerCase() || '';
+    const variant = p.variant?.toLowerCase() || '';
+    return cleaned.includes(brand) && (variant === '' || cleaned.includes(variant));
+  });
+
+  if (!matchedProduct) {
+    throw new Error('No matching product found');
+  }
+
+  return {
+    productId: matchedProduct._id.toString(),
+    quantity_full,
+    quantity_partial,
+  };
 };
