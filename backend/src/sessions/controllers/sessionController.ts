@@ -405,3 +405,57 @@ export const parseVoiceInput = async (
     }
   }
 };
+
+/**
+ * Controller: Parse voice and update session items
+ */
+export const voiceAddToSession = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const sessionId = req.params.id;
+    const { transcript } = req.body;
+
+    if (!userId || !sessionId || !transcript || typeof transcript !== 'string') {
+      res.status(400).json({ message: 'Invalid request: sessionId or transcript missing' });
+      return;
+    }
+
+    // 🔍 Extract product + quantities
+    const { productId, quantity_full, quantity_partial } = await parseVoiceTranscript(
+      transcript,
+      userId
+    );
+
+    // ⚙️ Call update service with the parsed item
+    const updatedSession = await updateInventorySession(sessionId, userId, {
+      items: [
+        {
+          productId,
+          quantity_full,
+          quantity_partial,
+        },
+      ],
+    });
+
+    if (!updatedSession) {
+      res.status(404).json({ message: 'Session not found or not owned by user' });
+      return;
+    }
+
+    res.status(200).json({
+      message: 'Item added or updated from voice input',
+      data: updatedSession,
+    });
+  } catch (error: any) {
+    if (error.message === 'No matching product found') {
+      res.status(404).json({ message: 'No matching product found in database' });
+    } else {
+      console.error('❌ voiceAddToSession error:', error);
+      res.status(500).json({ message: 'Server error during voice-based session update' });
+    }
+  }
+};
+

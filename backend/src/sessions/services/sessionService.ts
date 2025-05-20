@@ -1,6 +1,8 @@
 import ExcelJS from 'exceljs';
+import { wordsToNumbers } from 'words-to-numbers';
 import InventorySessionModel, { InventorySession, SessionStatus } from '../models/sessionModel';
 import  ProductModel, { Product}  from '../../product/models/productModel';
+// import { parseWordNumber, parseDecimalWord } from '../../utils/wordToNumber';
 import { generateTempProductId } from '../../utils/generateTempID';
 import TempProductModel from '../../admin/models/tempProductModel';
 import { SessionItem } from '../models/sessionModel';
@@ -273,11 +275,10 @@ export const exportSessionsToExcel = async (
   return buffer as unknown as ArrayBuffer;
 };
 
-
 /**
- * Parses a voice transcript to extract productId and quantity
+ * Parses a voice transcript to extract productId and quantity.
+ * Assumes full and partial quantities must be spoken separately.
  */
-
 export const parseVoiceTranscript = async (
   transcript: string,
   userId: string
@@ -285,27 +286,14 @@ export const parseVoiceTranscript = async (
   productId: string;
   quantity_full: number;
   quantity_partial: number;
+  message: string;
 }> => {
-  const cleaned = transcript.trim().toLowerCase();
+  const cleaned = transcript.trim().toLowerCase().replace(/-/g, ' ');
 
   let quantity_full = 0;
   let quantity_partial = 0;
 
-  // ✅ Extract full units like "12 bottles" or "12 full"
-  const fullMatch = cleaned.match(/(\d+)\s?(bottles?|full)?/);
-  if (fullMatch && fullMatch[1]) {
-    quantity_full = parseInt(fullMatch[1], 10);
-  }
-
-  // ✅ Extract partial units like "point eight" or "0.8"
-  const partialMatch = cleaned.match(/point\s?(\d)|(\d\.\d)/);
-  if (partialMatch) {
-    const raw = partialMatch[1] || partialMatch[2];
-    const parsed = parseFloat(`0.${raw}`);
-    if (!isNaN(parsed)) quantity_partial = parsed;
-  }
-
-  // ✅ Match product (brand + variant separately)
+  // ✅ Match product from DB
   const products: Product[] = await ProductModel.find({ userId });
 
   const matchedProduct = products.find((p) => {
@@ -318,9 +306,48 @@ export const parseVoiceTranscript = async (
     throw new Error('No matching product found');
   }
 
+  const brand = matchedProduct.brand?.toLowerCase() || '';
+  const variant = matchedProduct.variant?.toLowerCase() || '';
+
+  // ✅ Extract full quantity (e.g., "twenty eight bottles")
+  const fullMatch = cleaned.match(/(?:^|\s)([a-z\s\d]+?)(?=\s+(bottles?|full))/i);
+  if (fullMatch && fullMatch[1]) {
+    const rawFull = fullMatch[1].trim();
+    const withoutProduct = rawFull.replace(brand, '').replace(variant, '').trim();
+    const parsed = wordsToNumbers(withoutProduct, { fuzzy: true });
+    if (typeof parsed === 'number') {
+      quantity_full = parsed;
+    }
+  }
+
+  // ✅ Extract partial quantity (e.g., "point seven")
+  const partialMatch = cleaned.match(/point\s?([a-z\d\s]+)/);
+  if (partialMatch && partialMatch[1]) {
+    let rawPartial = partialMatch[1].trim();
+    rawPartial = rawPartial.replace(/bottles?|full/, '').trim();
+    const parsed = wordsToNumbers(rawPartial, { fuzzy: true });
+    if (typeof parsed === 'number') {
+      const divisor = parsed <= 9 ? 10 : 100;
+      const forcedDecimal = parsed / divisor;
+      quantity_partial = parseFloat(forcedDecimal.toFixed(2));
+    }
+  }
+
+  // ✅ Guidance message (since full+partial never happen together yet)
+  let message = '';
+
+  if (quantity_full === 0 && quantity_partial > 0) {
+    message = "Partial quantity detected. If you also meant full bottles, please say that separately.";
+  } else if (quantity_full > 0 && quantity_partial === 0) {
+    message = "Full quantity detected. If there are partials, say 'point five' in a separate sentence.";
+  } else if (quantity_full === 0 && quantity_partial === 0) {
+    message = "No quantity detected. Please try again.";
+  }
+
   return {
     productId: matchedProduct._id.toString(),
     quantity_full,
     quantity_partial,
+    message,
   };
 };

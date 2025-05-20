@@ -10,6 +10,7 @@ import {
   finalizeSessionById,
   exportMonthlyInventory,
   parseVoiceInput,
+  voiceAddToSession,
 } from '../controllers/sessionController';
 
 import {
@@ -21,6 +22,7 @@ import {
   SESSION_FINALIZE_PREFIX,
   SESSION_EXPORT_PREFIX,
   SESSION_PARSE_VOICE_PREFIX,
+  SESSION_VOICE_ADD_PREFIX,
 } from '../sessionConstants';
 
 const router = Router();
@@ -81,6 +83,84 @@ router.post(SESSION_START_PREFIX,
   restrictIfUnpaid,
   startSession);
 
+  /**
+ * @swagger
+ * /v1.0.0/session/voice-parse:
+ *   post:
+ *     summary: Parse a voice transcript into product and quantity
+ *     tags:
+ *       - Inventory Sessions
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - transcript
+ *             properties:
+ *               transcript:
+ *                 type: string
+ *                 example: "Grey Goose point eight"
+ *     responses:
+ *       200:
+ *         description: Parsed product and quantity
+ *       400:
+ *         description: Missing or invalid transcript
+ */
+router.post(SESSION_PARSE_VOICE_PREFIX,
+  authenticate,
+  restrictIfUnpaid,
+  parseVoiceInput);
+
+  /**
+ * @swagger
+ * /v1.0.0/session/{id}/voice-add:
+ *   post:
+ *     summary: Parse voice transcript and add/update item in a session
+ *     tags:
+ *       - Inventory Sessions
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The session ID to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - transcript
+ *             properties:
+ *               transcript:
+ *                 type: string
+ *                 example: "Absolut Mandrin point five"
+ *     responses:
+ *       200:
+ *         description: Item successfully parsed and added/updated in session
+ *       400:
+ *         description: Invalid request or missing transcript
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Session or product not found
+ *       500:
+ *         description: Server error
+ */
+router.post(SESSION_VOICE_ADD_PREFIX,
+  authenticate, 
+  restrictIfUnpaid, 
+  voiceAddToSession)
+
+
 /**
  * @swagger
  * /v1.0.0/session/all:
@@ -96,41 +176,6 @@ router.post(SESSION_START_PREFIX,
  *         description: Unauthorized
  */
 router.get(SESSION_GET_ALL_PREFIX, authenticate, getAllSessions);
-
-
-/**
- * @swagger
- * /v1.0.0/session/export:
- *   get:
- *     summary: Export finalized sessions for a given month to Excel
- *     tags:
- *       - Inventory Sessions
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: periodTag
- *         required: false
- *         schema:
- *           type: string
- *         description: "Month to export (format: YYYY-MM). Defaults to current month."
- *     responses:
- *       200:
- *         description: Excel file generated successfully
- *         content:
- *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
- *             schema:
- *               type: string
- *               format: binary
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Server error
- */
-router.get(SESSION_EXPORT_PREFIX,
-  authenticate,
-  restrictIfUnpaid,
-  exportMonthlyInventory);
 
 /**
  * @swagger
@@ -191,40 +236,11 @@ router.get(SESSION_GET_ONE_PREFIX, authenticate, getSessionById);
  *         description: Session not found
  */
 router.put(SESSION_UPDATE_PREFIX,
-   authenticate,
-   restrictIfUnpaid,
-   updateSessionById);
-
-/**
- * @swagger
- * /v1.0.0/session/{id}:
- *   delete:
- *     summary: Delete an inventory session by ID
- *     tags:
- *       - Inventory Sessions
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: MongoDB _id of the session
- *     responses:
- *       200:
- *         description: Session deleted successfully
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Session not found
- */
-router.delete(SESSION_DELETE_PREFIX,
   authenticate,
   restrictIfUnpaid,
-  deleteSessionById);
+  updateSessionById);
 
-/**
+  /**
  * @swagger
  * /v1.0.0/session/{id}/finalize:
  *   put:
@@ -257,34 +273,65 @@ router.put(SESSION_FINALIZE_PREFIX,
 
 /**
  * @swagger
- * /v1.0.0/session/voice-parse:
- *   post:
- *     summary: Parse a voice transcript into product and quantity
+ * /v1.0.0/session/{id}:
+ *   delete:
+ *     summary: Delete an inventory session by ID
  *     tags:
  *       - Inventory Sessions
  *     security:
  *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - transcript
- *             properties:
- *               transcript:
- *                 type: string
- *                 example: "Grey Goose point eight"
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: MongoDB _id of the session
  *     responses:
  *       200:
- *         description: Parsed product and quantity
- *       400:
- *         description: Missing or invalid transcript
+ *         description: Session deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Session not found
  */
-router.post(SESSION_PARSE_VOICE_PREFIX,
+router.delete(SESSION_DELETE_PREFIX,
   authenticate,
   restrictIfUnpaid,
-  parseVoiceInput);
+  deleteSessionById);
+
+  /**
+ * @swagger
+ * /v1.0.0/session/export:
+ *   get:
+ *     summary: Export finalized sessions for a given month to Excel
+ *     tags:
+ *       - Inventory Sessions
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: periodTag
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: "Month to export (format: YYYY-MM). Defaults to current month."
+ *     responses:
+ *       200:
+ *         description: Excel file generated successfully
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get(SESSION_EXPORT_PREFIX,
+  authenticate,
+  restrictIfUnpaid,
+  exportMonthlyInventory);
 
 export default router;
