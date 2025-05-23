@@ -6,6 +6,8 @@ import {
   getUserByIdService,
   updateUserByIdService,
   deleteUserByIdService,
+  forgotPasswordService,
+  resetPasswordService,
 } from '../services/userService';
 
 /**
@@ -113,5 +115,60 @@ export const deleteUserById = async (req: Request, res: Response): Promise<void>
   } catch (err) {
     console.error('Delete User Error:', err);
     res.status(500).json({ message: 'Failed to delete user' });
+  }
+};
+
+/**
+ * Send a password reset link to user's email
+ */
+export const forgotPassword = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ message: 'Email is required' });
+      return;
+    }
+
+    const result = await forgotPasswordService(email);
+
+    res.status(200).json({
+      message: 'If an account exists for that email, a reset link has been sent.',
+    });
+  } catch (err) {
+    console.error('Forgot Password Error:', err);
+    res.status(500).json({ message: 'Failed to process password reset' });
+  }
+};
+
+/**
+ * Reset user password using a valid reset token
+ */
+export const resetPassword = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      res.status(400).json({ message: 'Token and new password are required' });
+      return;
+    }
+
+    const success = await resetPasswordService(token, newPassword);
+
+    if (!success) {
+      res.status(400).json({ message: 'Invalid or expired reset token' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Password has been reset successfully' });
+  } catch (err) {
+    console.error('Reset Password Error:', err);
+    res.status(500).json({ message: 'Failed to reset password' });
   }
 };

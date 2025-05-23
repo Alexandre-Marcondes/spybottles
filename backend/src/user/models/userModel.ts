@@ -15,6 +15,8 @@ export interface User extends Document {
   stripeCustomerId?: string | null;
   isPaid: boolean;
   isActive: boolean;
+  resetToken?: string;
+  resetTokenExpires?: Date;
 }
 
 const userSchema: Schema = new Schema({
@@ -59,6 +61,14 @@ const userSchema: Schema = new Schema({
   isActive: {
     type: Boolean,
     default: true,
+  },
+  resetToken: {
+    type: String,
+    required: false,
+  },
+  resetTokenExpires: {
+    type: Date,
+    required: false,
   },
 });
 

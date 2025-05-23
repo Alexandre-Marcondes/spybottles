@@ -23,6 +23,16 @@ export const USER_DELETE_PATH = USER_ROUTE + USER_DELETE_PREFIX;
 // Swagger tag for grouping
 export const USER_TAG = 'User';
 
+// Forgot Password & Reset Password Routes
+export const USER_FORGOT_PASSWORD_PREFIX = '/forgot-password';
+export const USER_FORGOT_PASSWORD_PATH =
+  USER_ROUTE + USER_FORGOT_PASSWORD_PREFIX;
+
+export const USER_RESET_PASSWORD_PREFIX = '/reset-password';
+export const USER_RESET_PASSWORD_PATH =
+  USER_ROUTE + USER_RESET_PASSWORD_PREFIX;
+
+
 // // API Version and Base Prefix
 // export const USER_API_VERSION = '/v1.0.0';
 

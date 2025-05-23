@@ -6,6 +6,8 @@ import {
   getUserById,
   updateUserById,
   deleteUserById,
+  forgotPassword,
+  resetPassword, 
 } from '../controllers/userController';
 
 import {
@@ -14,6 +16,8 @@ import {
     USER_GET_ONE_PREFIX,
     USER_UPDATE_PREFIX,
     USER_DELETE_PREFIX,
+    USER_FORGOT_PASSWORD_PREFIX,
+    USER_RESET_PASSWORD_PREFIX,
 } from '../userConstants';
 
 const router = Router();
@@ -175,5 +179,62 @@ router.put(`${USER_UPDATE_PREFIX}`, authenticate, updateUserById);
  *         description: User not found
  */
 router.delete(`${USER_DELETE_PREFIX}`, authenticate, deleteUserById);
+
+/**
+ * @swagger
+ * /v1.0.0/user/forgot-password:
+ *   post:
+ *     summary: Request a password reset link via email
+ *     tags:
+ *       - User
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset email sent if user exists
+ *       400:
+ *         description: Invalid email format or missing field
+ */
+router.post(USER_FORGOT_PASSWORD_PREFIX, forgotPassword);
+
+
+/**
+ * @swagger
+ * /v1.0.0/user/reset-password:
+ *   post:
+ *     summary: Reset user password with token
+ *     tags:
+ *       - User
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *       400:
+ *         description: Invalid or expired token
+ */
+router.post(USER_RESET_PASSWORD_PREFIX, resetPassword);
+
 
 export default router;
