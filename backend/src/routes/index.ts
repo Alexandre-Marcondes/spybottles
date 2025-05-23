@@ -1,4 +1,4 @@
-// src/routes/index.ts
+// src/routes/index.ts ** mainRoutes/index.ts **
 import { Router } from 'express';
 
 // This is the actual routes file

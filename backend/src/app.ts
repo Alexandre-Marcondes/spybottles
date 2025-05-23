@@ -17,7 +17,7 @@ import adminUserRoutes from './admin/routes/adminUserRoutes'
 const app = express();
 const PORT = config.port;
 
-// 🔒 Capture raw body for Stripe webhook validation
+// 🔒 Capture raw body for Stripe webhook validation ** must come before express.json()
 app.use(
   '/v1.0.0/stripe/webhook',
   bodyParser.raw({ type: 'application/json' })
@@ -27,7 +27,6 @@ app.use(
 app.use(express.json());
 
 // connect to MongoDb Atlas
-
 mongoose.connect(config.mongoUri)
 .then(() => {
   console.log('Connected to MOngoDB Atlas')
@@ -35,11 +34,12 @@ mongoose.connect(config.mongoUri)
   console.error('Mongo connection error', err);
 })
 
+// Enables Swagger UI at /docs route for interactive API documentation.
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 // Default route. 
 app.get("/", (req, res) => {
-  res.send("Hello, This is the first step to barvoice.com");
+  res.send("Hello, This is the first step to SPYBOTTLES.com");
 });
 
  // ✅ Main Routes (for API)
