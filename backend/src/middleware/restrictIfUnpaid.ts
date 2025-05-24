@@ -1,62 +1,45 @@
 import { Request, Response, NextFunction } from 'express';
-import { UserModel } from '../user/models/userModel';
-
-// /**
-//  * Middleware to block access if user does not have an active subscription.
-//  */
-// export const restrictIfUnpaid = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ): Promise<void> => {
-//   const userId = req.user?.userId;
-
-//   if (!userId) {
-//     res.status(401).json({ message: 'Unauthorized' });
-//     return;
-//   }
-
-//   const user = await UserModel.findById(userId);
-
-//   if (!user || !user.isPaid) {
-//     res.status(403).json({ message: 'Subscription required' });
-//     return;
-//   }
-
-//   next();
-// };
-
-const FREE_USER_EMAILS = ['bartender@bar.com', 'alexmarcondes1111@gmil.com'];
+import { BizUserModel } from '../bizUser/models/bizUserModel';
 
 export const restrictIfUnpaid = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const userId = req.user?.userId;
+  const user = req.user;
 
-  if (!userId) {
-    res.status(401).json({ message: 'Unauthorized' });
+  if (user?.role === 'superAdmin') {
+  return next();
+  }
+
+  // ✅ If the user is self-paid, allow access
+  if (user?.isSelfPaid) {
+    if(user?.isPaid){
+      return next();
+    }
+    else {
+      res.status(402).json({message: ' Personal subscription required'});
+    }
+  }
+
+  // 🧠 Otherwise, check if their currentCompany is paid
+  if (!user?.currentCompany) {
+    res.status(403).json({ message: 'No company context. Access denied.' });
     return;
   }
 
-  const user = await UserModel.findById(userId);
+  try {
+    const bizUser = await BizUserModel.findById(user.currentCompany);
 
-  // ✅ Allow admin users
-  if (user?.role === 'admin') {
-    return next();
+    if (!bizUser || !bizUser.isPaid) {
+      res.status(402).json({ message: 'Company subscription is required.' });
+      return;
+    }
+
+    // ✅ Company is paid — grant access
+    next();
+  } catch (err) {
+    console.error('Subscription check failed:', err);
+    res.status(500).json({ message: 'Error validating subscription.' });
   }
-
-  // ✅ Allow free email list
-  if (FREE_USER_EMAILS.includes(user?.email || '')) {
-    return next();
-  }
-
-  // ⛔ Block unpaid users
-  if (!user?.isPaid) {
-    res.status(403).json({ message: 'Subscription required' });
-    return;
-  }
-
-  next();
 };

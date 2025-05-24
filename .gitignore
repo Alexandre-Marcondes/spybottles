@@ -41,6 +41,8 @@ yarn-error.*
 
 # temp scripts
 tempScript/hashPassword.js
+tempScript/seedUser.js
+tempScript/UpdateBiz.ts
 
 # Ignore temp script folder
 tempScript/

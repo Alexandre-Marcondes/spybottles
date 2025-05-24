@@ -1,19 +1,27 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
+
+export enum UserRole {
+  Bartender = 'bartender',
+  Manager = 'manager',
+  CompanyAdmin = 'companyAdmin',
+  SuperAdmin = 'superAdmin',
+  Other = 'other',
+}
 
 export interface User extends Document {
-  userId: string;
   email: string;
   password: string;
   birthday: string;
-  role: 'bartender' | 'manager' | 'admin' | 'other';
-  bizId?: string | null;
+  role: UserRole;
+  companies: Types.ObjectId[];
   location: {
     lat: number;
     long: number;
   };
   phoneNumber: string;
   stripeCustomerId?: string | null;
-  isPaid: boolean;
+  isSelfPaid: boolean; // ✅ NEW
+  isPaid: boolean;     // ✅ Legacy, optional to keep
   isActive: boolean;
   resetToken?: string;
   resetTokenExpires?: Date;
@@ -35,13 +43,15 @@ const userSchema: Schema = new Schema({
   },
   role: {
     type: String,
-    enum: ['bartender', 'manager', 'admin', 'other'],
+    enum: Object.values(UserRole),
     required: true,
   },
-  bizId: {
-    type: String,
-    required: false,
-  },
+  companies: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'BizUser',
+    },
+  ],
   location: {
     lat: { type: Number, required: true },
     long: { type: Number, required: true },
@@ -53,6 +63,10 @@ const userSchema: Schema = new Schema({
   stripeCustomerId: {
     type: String,
     default: null,
+  },
+  isSelfPaid: {
+    type: Boolean,
+    default: false,
   },
   isPaid: {
     type: Boolean,
