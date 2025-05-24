@@ -4,17 +4,12 @@ import {
   getAllUsersService,
   createUserService,
   deleteUserByIdService,
-} from '../../user/services/userService'; // Reuse your user services
+} from '../services/superAdminUserService'; // Reuse your user services
 
 /**
  * Admin: Get all users
  */
 export const getAllUsersAdmin = async (req: Request, res: Response): Promise<void> => {
-  if (!isAdmin(req)) {
-    res.status(403).json({ message: 'Access denied' });
-    return;
-  }
-
   try {
     const users = await getAllUsersService();
     res.status(200).json(users);
@@ -28,11 +23,6 @@ export const getAllUsersAdmin = async (req: Request, res: Response): Promise<voi
  * Admin: Create user with any role
  */
 export const createUserAsAdmin = async (req: Request, res: Response): Promise<void> => {
-  if (!isAdmin(req)) {
-    res.status(403).json({ message: 'Access denied' });
-    return;
-  }
-
   try {
     const newUser = await createUserService(req.body);
     res.status(201).json(newUser);
@@ -46,11 +36,6 @@ export const createUserAsAdmin = async (req: Request, res: Response): Promise<vo
  * Admin: Delete user by ID
  */
 export const deleteUserAsAdmin = async (req: Request, res: Response): Promise<void> => {
-  if (!isAdmin(req)) {
-    res.status(403).json({ message: 'Access denied' });
-    return;
-  }
-
   try {
     const deleted = await deleteUserByIdService(req.params.id);
     if (!deleted) {

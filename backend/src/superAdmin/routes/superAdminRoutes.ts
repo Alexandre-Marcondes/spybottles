@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { resolveTempProduct } from '../controllers/adminController';
-import { authenticateAdmin } from '../middleware/adminAuthMiddleware';
-import { RESOLVE_TEMP_PRODUCT_PREFIX } from '../adminConstants';
+import { resolveTempProduct } from '../controllers/superAdminController';
+import { authenticateAdmin } from '../middleware/superAdminAuthMiddleware';
+import { SUPER_ADMIN_RESOLVE_TEMP_PRODUCT_PREFIX } from '../superAdminConstants';
 
 const router = Router();
 
@@ -10,7 +10,7 @@ const router = Router();
  * /v1.0.0/admin/resolve-temp-product:
  *   post:
  *     summary: Replace temp product ID with real product ID in all sessions
- *     tags: [Admin]
+ *     tags: [Super Admin]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -35,6 +35,6 @@ const router = Router();
  *       500:
  *         description: Server error
  */
-router.post(RESOLVE_TEMP_PRODUCT_PREFIX, authenticateAdmin, resolveTempProduct);
+router.post(SUPER_ADMIN_RESOLVE_TEMP_PRODUCT_PREFIX, authenticateAdmin, resolveTempProduct);
 
 export default router;

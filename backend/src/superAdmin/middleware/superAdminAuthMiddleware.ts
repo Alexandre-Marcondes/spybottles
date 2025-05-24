@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../../../src/config';
+import { config } from '../../config';
 
 export const authenticateAdmin = (
   req: Request,

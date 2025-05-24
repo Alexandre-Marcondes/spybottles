@@ -1,17 +1,17 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authMiddleware';
-import { isAdmin } from '../../utils/isAdmin';
+import { isSuperAdmin } from '../../utils/isSuperAdmin';
 import {
   getAllUsersAdmin,
   createUserAsAdmin,
   deleteUserAsAdmin,
-} from '../controllers/adminUserController';
+} from '../controllers/superAdminUserController';
 
 import {
-  ADMIN_USER_GET_ALL_PREFIX,
-  ADMIN_USER_CREATE_PREFIX,
-  ADMIN_USER_DELETE_PREFIX,
-} from '../adminUserConstants';
+  SUPER_ADMIN_USER_GET_ALL_PREFIX,
+  SUPER_ADMIN_USER_CREATE_PREFIX,
+  SUPER_ADMIN_USER_DELETE_PREFIX,
+} from '../superAdminUserConstants';
 
 const router = Router();
 
@@ -20,8 +20,8 @@ const router = Router();
  * @swagger
  * /v1.0.0/admin/users:
  *   get:
- *     summary: Admin - Get all users
- *     tags: [Admin User]
+ *     summary: Super Admin - Get all users
+ *     tags: [Super Admin User]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -30,15 +30,15 @@ const router = Router();
  *       403:
  *         description: Access denied
  */
-router.get(ADMIN_USER_GET_ALL_PREFIX, authenticate, getAllUsersAdmin);
+router.get(SUPER_ADMIN_USER_GET_ALL_PREFIX, authenticate, isSuperAdmin, getAllUsersAdmin);
 
 // Admin create user
 /**
  * @swagger
  * /v1.0.0/admin/users/create:
  *   post:
- *     summary: Admin - Create a new user with any role
- *     tags: [Admin User]
+ *     summary: Super Admin - Create a new user with any role
+ *     tags: [Super Admin User]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -81,15 +81,15 @@ router.get(ADMIN_USER_GET_ALL_PREFIX, authenticate, getAllUsersAdmin);
  *       403:
  *         description: Access denied
  */
-router.post(ADMIN_USER_CREATE_PREFIX, authenticate, createUserAsAdmin);
+router.post(SUPER_ADMIN_USER_CREATE_PREFIX, authenticate, isSuperAdmin, createUserAsAdmin);
 
 // Admin delete user
 /**
  * @swagger
  * /v1.0.0/admin/users/{id}:
  *   delete:
- *     summary: Admin - Delete a user by ID
- *     tags: [Admin User]
+ *     summary: Super Admin - Delete a user by ID
+ *     tags: [Super Admin User]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -107,6 +107,6 @@ router.post(ADMIN_USER_CREATE_PREFIX, authenticate, createUserAsAdmin);
  *       404:
  *         description: User not found
  */
-router.delete(ADMIN_USER_DELETE_PREFIX, authenticate, deleteUserAsAdmin);
+router.delete(SUPER_ADMIN_USER_DELETE_PREFIX, authenticate, isSuperAdmin, deleteUserAsAdmin);
 
 export default router;

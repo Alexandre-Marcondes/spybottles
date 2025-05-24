@@ -4,7 +4,7 @@ import InventorySessionModel, { InventorySession, SessionStatus } from '../model
 import  ProductModel, { Product}  from '../../product/models/productModel';
 // import { parseWordNumber, parseDecimalWord } from '../../utils/wordToNumber';
 import { generateTempProductId } from '../../utils/generateTempID';
-import TempProductModel from '../../admin/models/tempProductModel';
+import TempProductModel from '../../superAdmin/models/tempProductModel';
 import { SessionItem } from '../models/sessionModel';
 
 interface CreateSessionInput {

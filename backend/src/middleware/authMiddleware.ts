@@ -1,20 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// Extend Express's Request type to include 'user'
-interface AuthenticatedRequest extends Request {
-  user?: any;
+interface DecodedToken {
+  userId: string;
+  email: string;
+  role: string;
+  companies?: string[];
+  currentCompany?: string;
+  isSelfPaid?: boolean;
 }
 
-// Middleware to authenticate JWT tokens from Authorization header
 export const authenticate = (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void => {
   const authHeader = req.headers.authorization;
 
-  // Check if Authorization header is present and starts with "Bearer"
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({ message: 'Unauthorized: No token provided' });
     return;
@@ -26,12 +28,12 @@ export const authenticate = (
     const secret = process.env.JWT_SECRET;
     if (!secret) throw new Error('JWT secret not configured');
 
-    const decoded = jwt.verify(token, secret);
+    const decoded = jwt.verify(token, secret) as DecodedToken;
 
-    // Attach decoded token to request object
-    req.user = decoded;
+    // 👇 TypeScript-safe hack to attach to req
+    (req as any).user = decoded;
 
-    next(); // Proceed to next middleware or route handler
+    next();
   } catch (err) {
     res.status(401).json({ message: 'Unauthorized: Invalid token' });
   }

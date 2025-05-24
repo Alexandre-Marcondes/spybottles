@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { resolveTempProductService } from '../services/adminService';
+import { resolveTempProductService } from '../services/superAdminService';
 
 export const resolveTempProduct = async (
   req: Request,

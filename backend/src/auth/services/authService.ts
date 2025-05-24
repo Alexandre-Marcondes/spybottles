@@ -27,6 +27,10 @@ export const loginUserService = async (credentials: LoginInput) => {
   // ✅ Handle company or self-paid access
   let selectedCompanyId: string | null = null;
 
+  if (user.isSelfPaid && companyId) {
+  throw new Error('Self-paid users should not provide a companyId.');
+ }
+
   const hasCompanies = Array.isArray(user.companies) && user.companies.length > 0;
 
   if (hasCompanies) {

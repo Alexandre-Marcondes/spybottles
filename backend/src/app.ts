@@ -9,8 +9,8 @@ import { swaggerUi, swaggerSpec } from './utils/swagger';
 import mainRoutes from '../src/routes';
 import { config } from './config';
 
-import adminRoutes from './admin/routes/adminRoutes';
-import adminUserRoutes from './admin/routes/adminUserRoutes'
+import superAdminRoutes from './superAdmin/routes/superAdminRoutes';
+import superAdminUserRoutes from './superAdmin/routes/superAdminUserRoutes'
 
 
 
@@ -46,8 +46,10 @@ app.get("/", (req, res) => {
 app.use('/', mainRoutes);
 
 // ✅ Step 3: Admin-only tools
-app.use('/v1.0.0/admin', adminRoutes);
-app.use('/v1.0.0/admin/users', adminUserRoutes);
+// ✅ Step 3: SuperAdmin-only tools
+app.use('/v1.0.0/super-admin', superAdminRoutes);
+app.use('/v1.0.0/super-admin/users', superAdminUserRoutes);
+
 
 
 app.listen(Number(PORT), '0.0.0.0', () => {
