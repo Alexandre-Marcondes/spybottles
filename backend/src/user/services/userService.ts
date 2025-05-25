@@ -1,53 +1,61 @@
 import crypto from 'crypto';
 import { UserModel } from '../models/userModel';
-import { User } from '../models/userModel';
 import { sendEmail } from '../../utils/email';
 import { hashPassword } from '../../utils/authUtils';
 
-// Create a new user
-export const createUserService = async (
-  userData: Partial<User>
-) => {
-  if (!userData.password) {
-    throw new Error('Password is required');
-  }
+// ✅ Self-paid user signup (Bob only)
+export const signupSelfPaidUserService = async ({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}) => {
+  const hashedPassword = await hashPassword(password);
 
-  const hashedPassword = await hashPassword(userData.password);
   const newUser = new UserModel({
-    ...userData,
+    email,
     password: hashedPassword,
+    role: 'selfPaidUser',
+    isSelfPaid: true,
+    companies: [],
   });
 
   return await newUser.save();
 };
 
-// Get all users
-export const getAllUsersService = async () => {
-  return await UserModel.find();
-};
-
-// Get one user by ID
-export const getUserByIdService = async (id: string) => {
-  return await UserModel.findById(id);
-};
-
-// Update user by ID
-export const updateUserByIdService = async (
-  id: string,
-  updateData: Partial<User>
+// ✅ Update own account
+export const updateSelfPaidUserService = async (
+  userId: string,
+  updateData: Partial<{
+    email: string;
+    phoneNumber: string;
+    location: {
+      lat: number;
+      long: number;
+    };
+  }>
 ) => {
-  return await UserModel.findByIdAndUpdate(id, updateData, { new: true });
+  return await UserModel.findByIdAndUpdate(userId, updateData, { new: true });
 };
 
-// Delete user by ID
-export const deleteUserByIdService = async (id: string) => {
-  return await UserModel.findByIdAndDelete(id);
+// ✅ Delete own account
+
+ export const deleteSelfPaidUserService = async (userId: string) => {
+  return await UserModel.findByIdAndUpdate(
+    userId,
+    {
+      isActive: false,           // 🔒 Soft-delete flag
+      deletedAt: new Date(),     // 🕒 Timestamp for record
+      subscriptionStatus: 'cancelled', // 📦 Optional: for Stripe sync
+    },
+    { new: true }
+  );
 };
 
-// Forgot password: generate token and email user
-export const forgotPasswordService = async (
-  email: string
-): Promise<void> => {
+
+// ✅ Forgot password
+export const forgotPasswordService = async (email: string): Promise<void> => {
   const user = await UserModel.findOne({ email });
   if (!user) return;
 
@@ -67,7 +75,7 @@ export const forgotPasswordService = async (
   });
 };
 
-// Reset password using a token
+// ✅ Reset password
 export const resetPasswordService = async (
   token: string,
   newPassword: string

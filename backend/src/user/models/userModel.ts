@@ -8,6 +8,11 @@ export enum UserRole {
   Other = 'other',
 }
 
+export enum SubscriptionStatus {
+  ACTIVE = 'active',
+  CANCELLED = 'cancelled',
+}
+
 export interface User extends Document {
   email: string;
   password: string;
@@ -25,6 +30,7 @@ export interface User extends Document {
   isActive: boolean;
   resetToken?: string;
   resetTokenExpires?: Date;
+  subscriptionStatus?: SubscriptionStatus;
 }
 
 const userSchema: Schema = new Schema({
@@ -84,6 +90,11 @@ const userSchema: Schema = new Schema({
     type: Date,
     required: false,
   },
+  subscriptionStatus: {
+  type: String,
+  enum: Object.values(SubscriptionStatus),
+  default: SubscriptionStatus.ACTIVE,
+},
 });
 
 export const UserModel = mongoose.model<User>('User', userSchema);

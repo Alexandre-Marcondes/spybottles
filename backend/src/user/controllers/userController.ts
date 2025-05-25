@@ -1,125 +1,87 @@
 import { Request, Response } from 'express';
-import { isSelfOrAdmin } from '../../utils/authUtils';
 import {
-  createUserService,
-  getAllUsersService,
-  getUserByIdService,
-  updateUserByIdService,
-  deleteUserByIdService,
+  signupSelfPaidUserService,
+  updateSelfPaidUserService,
+  deleteSelfPaidUserService,
   forgotPasswordService,
   resetPasswordService,
 } from '../services/userService';
 
 /**
- * Create a new user
- * - Role is forced to 'bartender' (admin role not allowed from this route)
+ * Self-paid user signup (Bob)
+ * - No admin, role, or companyId allowed
  */
-export const createUser = async (req: Request, res: Response): Promise<void> => {
+export const createSelfPaidUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-  //  ⛔ Prevent malicious role injection
-    if (req.body.role === 'admin') {
-      res.status(403).json({ message: ' ⛔ Cannot assign admin role' });
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      res.status(400).json({ message: 'Email and password are required' });
       return;
     }
 
-  // ✅ Default role if not provided
-    if (!req.body.role) {
-      req.body.role = 'bartender';
-    }
+    const newUser = await signupSelfPaidUserService({ email, password });
 
-    const user = await createUserService(req.body);
-    res.status(201).json(user);
+    res.status(201).json(newUser);
   } catch (err) {
-    console.error('Create User Error:', err);
-    res.status(400).json({ message: 'Failed to create user' });
+    console.error('Self-paid signup error:', err);
+    res.status(400).json({ message: 'Failed to create account' });
   }
 };
 
 /**
- * Get all users
- * - TODO: Should be restricted to admin-only access
+ * Update self-paid user profile (Bob)
  */
-export const getAllUsers = async (_req: Request, res: Response): Promise<void> => {
+export const updateOwnAccount = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const users = await getAllUsersService();
-    res.status(200).json(users);
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const updatedUser = await updateSelfPaidUserService(userId, req.body);
+
+    res.status(200).json(updatedUser);
   } catch (err) {
-    console.error('Get Users Error:', err);
-    res.status(500).json({ message: 'Failed to fetch users' });
+    console.error('Update self-paid user error:', err);
+    res.status(400).json({ message: 'Failed to update account' });
   }
 };
 
 /**
- * Get user by ID
- * - ✅ Only allow access if requesting own data OR if admin
+ * Delete your own self-paid account (Bob)
  */
-export const getUserById = async (req: Request, res: Response): Promise<void> => {
+export const deleteOwnAccount = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    if (!isSelfOrAdmin(req, req.params.id)) {
-      res.status(403).json({ message: 'Access denied' });
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
       return;
     }
 
-    const user = await getUserByIdService(req.params.id);
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-    res.status(200).json(user);
+    await deleteSelfPaidUserService(userId);
+
+    res.status(200).json({ message: 'Your account has been deleted' });
   } catch (err) {
-    console.error('Get User By ID Error:', err);
-    res.status(500).json({ message: 'Failed to fetch user' });
+    console.error('Delete self-paid user error:', err);
+    res.status(500).json({ message: 'Failed to delete account' });
   }
 };
 
 /**
- * Update user by ID
- * - ✅ Only allow self or admin to perform updates
- */
-export const updateUserById = async (req: Request, res: Response): Promise<void> => {
-  try {
-    if (!isSelfOrAdmin(req, req.params.id)) {
-      res.status(403).json({ message: 'Access denied' });
-      return;
-    }
-
-    const updated = await updateUserByIdService(req.params.id, req.body);
-    if (!updated) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-    res.status(200).json(updated);
-  } catch (err) {
-    console.error('Update User Error:', err);
-    res.status(400).json({ message: 'Failed to update user' });
-  }
-};
-
-/**
- * Delete user by ID
- * - ✅ Only allow self or admin to delete users
- */
-export const deleteUserById = async (req: Request, res: Response): Promise<void> => {
-  try {
-    if (!isSelfOrAdmin(req, req.params.id)) {
-      res.status(403).json({ message: 'Access denied' });
-      return;
-    }
-
-    const deleted = await deleteUserByIdService(req.params.id);
-    if (!deleted) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-    res.status(200).json({ message: 'User deleted' });
-  } catch (err) {
-    console.error('Delete User Error:', err);
-    res.status(500).json({ message: 'Failed to delete user' });
-  }
-};
-
-/**
- * Send a password reset link to user's email
+ * Forgot password
  */
 export const forgotPassword = async (
   req: Request,
@@ -133,7 +95,7 @@ export const forgotPassword = async (
       return;
     }
 
-    const result = await forgotPasswordService(email);
+    await forgotPasswordService(email);
 
     res.status(200).json({
       message: 'If an account exists for that email, a reset link has been sent.',
@@ -145,7 +107,7 @@ export const forgotPassword = async (
 };
 
 /**
- * Reset user password using a valid reset token
+ * Reset password
  */
 export const resetPassword = async (
   req: Request,
