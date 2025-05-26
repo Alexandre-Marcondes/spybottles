@@ -20,6 +20,8 @@ const router = Router();
  *   post:
  *     summary: Create a new company
  *     tags: [Company]
+ *     security: 
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -28,13 +30,9 @@ const router = Router();
  *             type: object
  *             required:
  *               - companyName
- *               - createdBy
  *             properties:
  *               companyName:
  *                 type: string
- *               createdBy:
- *                 type: string
- *                 description: MongoDB user ID of the creator (companyAdmin)
  *     responses:
  *       201:
  *         description: Company created successfully
@@ -91,8 +89,6 @@ router.get(COMPANY_GET_ONE_PREFIX, getCompanyById);
  *                 enum: [standard, pro, enterprise]
  *               logo:
  *                 type: string
- *               isActive:
- *                 type: boolean
  *     responses:
  *       200:
  *         description: Company updated

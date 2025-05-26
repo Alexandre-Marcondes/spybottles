@@ -32,11 +32,15 @@ export const updateCompanyService = async (
     companyName: string;
     tier: string;
     logo: string;
-    isActive: boolean;
   }>
 ) => {
-  return await CompanyModel.findByIdAndUpdate(id, updates, { new: true });
+  // 🔐 Remove any attempt to update isActive
+  const allowedUpdates = { ...updates };
+  delete (allowedUpdates as any).isActive;
+
+  return await CompanyModel.findByIdAndUpdate(id, allowedUpdates, { new: true });
 };
+
 
 // Invite user to company
 export const inviteUserToCompanyService = async ({

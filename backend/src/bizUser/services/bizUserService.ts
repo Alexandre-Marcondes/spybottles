@@ -35,7 +35,7 @@ export const createBizUserService = async ({
   await newUser.save();
 
   const newCompany = new CompanyModel({
-    name: companyName,
+    companyName,
     createdBy: newUser._id,
     users: [newUser._id],
   });
