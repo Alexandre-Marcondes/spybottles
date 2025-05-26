@@ -46,3 +46,6 @@ tempScript/UpdateBiz.ts
 
 # Ignore temp script folder
 tempScript/
+
+# Ignore .vscode folder completely
+.vscode/

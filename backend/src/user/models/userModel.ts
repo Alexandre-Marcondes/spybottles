@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export enum UserRole {
+  SelfPaidUser = 'selfPaidUser',
   Bartender = 'bartender',
   Manager = 'manager',
   CompanyAdmin = 'companyAdmin',
@@ -45,7 +46,7 @@ const userSchema: Schema = new Schema({
   },
   birthday: {
     type: String,
-    required: true,
+    required: false,
   },
   role: {
     type: String,
@@ -55,16 +56,16 @@ const userSchema: Schema = new Schema({
   companies: [
     {
       type: Schema.Types.ObjectId,
-      ref: 'BizUser',
+      ref: 'Company',
     },
   ],
   location: {
-    lat: { type: Number, required: true },
-    long: { type: Number, required: true },
+    lat: { type: Number, required: false },
+    long: { type: Number, required: false },
   },
   phoneNumber: {
     type: String,
-    required: true,
+    required: false,
   },
   stripeCustomerId: {
     type: String,

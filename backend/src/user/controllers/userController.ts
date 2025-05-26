@@ -25,7 +25,10 @@ export const createSelfPaidUser = async (
 
     const newUser = await signupSelfPaidUserService({ email, password });
 
-    res.status(201).json(newUser);
+    res.status(201).json({
+      email: newUser.email,
+      role: newUser.role,
+  });
   } catch (err) {
     console.error('Self-paid signup error:', err);
     res.status(400).json({ message: 'Failed to create account' });
@@ -49,7 +52,15 @@ export const updateOwnAccount = async (
 
     const updatedUser = await updateSelfPaidUserService(userId, req.body);
 
-    res.status(200).json(updatedUser);
+    if (!updatedUser) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    res.status(200).json({
+      email: updatedUser.email,
+      role: updatedUser.role,
+  });
   } catch (err) {
     console.error('Update self-paid user error:', err);
     res.status(400).json({ message: 'Failed to update account' });
