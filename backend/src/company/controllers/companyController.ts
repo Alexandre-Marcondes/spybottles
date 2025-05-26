@@ -14,7 +14,7 @@ export const createCompany = async (req: Request, res: Response): Promise<void> 
     const { companyName } = req.body;
     const createdBy = req.user?.userId;
 
-    if (!companyName || !createdBy) {
+    if (!companyName) {
       res.status(400).json({ message: 'Missing name or authentication' });
       return;
     }

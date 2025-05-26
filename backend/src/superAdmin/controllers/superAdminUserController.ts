@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { isAdmin } from '../../utils/isAdmin';
+import { isSuperAdmin } from '../../utils/isSuperAdmin';
 import {
   getAllUsersService,
   createUserService,

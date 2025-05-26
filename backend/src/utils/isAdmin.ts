@@ -1,5 +1,9 @@
 import { Request } from 'express';
 
-export const isAdmin = (req: Request): boolean => {
-  return req.user?.role === 'admin';
+export const isCompanyAdmin = (req: Request): boolean => {
+  return req.user?.role === 'companyAdmin';
+};
+
+export const isSuperAdmin = (req: Request): boolean => {
+  return req.user?.role === 'superAdmin';
 };
