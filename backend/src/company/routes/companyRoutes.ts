@@ -11,6 +11,7 @@ import {
   COMPANY_UPDATE_PREFIX,
   COMPANY_INVITE_PREFIX,
 } from '../companyConstants';
+import { authenticate } from '../../middleware/authMiddleware';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ const router = Router();
  *   post:
  *     summary: Create a new company
  *     tags: [Company]
- *     security: 
+ *     security:
  *       - bearerAuth: []
  *     requestBody:
  *       required: true
@@ -39,7 +40,7 @@ const router = Router();
  *       400:
  *         description: Validation error
  */
-router.post(COMPANY_CREATE_PREFIX, createCompany);
+router.post(COMPANY_CREATE_PREFIX, authenticate, createCompany);
 
 /**
  * @swagger
@@ -47,6 +48,8 @@ router.post(COMPANY_CREATE_PREFIX, createCompany);
  *   get:
  *     summary: Get a company by ID
  *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -60,7 +63,7 @@ router.post(COMPANY_CREATE_PREFIX, createCompany);
  *       404:
  *         description: Company not found
  */
-router.get(COMPANY_GET_ONE_PREFIX, getCompanyById);
+router.get(COMPANY_GET_ONE_PREFIX, authenticate, getCompanyById);
 
 /**
  * @swagger
@@ -68,9 +71,11 @@ router.get(COMPANY_GET_ONE_PREFIX, getCompanyById);
  *   put:
  *     summary: Update a company by ID
  *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         companyName: id
+ *         name: id
  *         schema:
  *           type: string
  *         required: true
@@ -95,7 +100,7 @@ router.get(COMPANY_GET_ONE_PREFIX, getCompanyById);
  *       404:
  *         description: Company not found
  */
-router.put(COMPANY_UPDATE_PREFIX, updateCompany);
+router.put(COMPANY_UPDATE_PREFIX, authenticate, updateCompany);
 
 /**
  * @swagger
@@ -103,9 +108,11 @@ router.put(COMPANY_UPDATE_PREFIX, updateCompany);
  *   post:
  *     summary: Invite a user to a company
  *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         companyName: id
+ *         name: id
  *         schema:
  *           type: string
  *         required: true
@@ -127,6 +134,6 @@ router.put(COMPANY_UPDATE_PREFIX, updateCompany);
  *       400:
  *         description: Invalid input or already exists
  */
-router.post(COMPANY_INVITE_PREFIX, inviteUserToCompany);
+router.post(COMPANY_INVITE_PREFIX, authenticate, inviteUserToCompany);
 
 export default router;

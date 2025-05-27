@@ -35,6 +35,7 @@ export interface User extends Document {
 }
 
 const userSchema: Schema = new Schema({
+
   email: {
     type: String,
     required: true,

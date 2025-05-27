@@ -1,15 +1,14 @@
 import { Router } from 'express';
 import { createBizUser } from '../controllers/bizUserController';
-import { BIZ_USER_CREATE_PREFIX } from '../bizUserConstants';
+import { BIZ_USER_SIGNUP_PREFIX, BIZ_USER_TAG } from '../bizUserConstants';
 
 const router = Router();
-
 /**
  * @swagger
- * /v1.0.0/biz-user/create:
+ * /v1.0.0/biz-user/sign-up:
  *   post:
- *     summary: Register a new company admin (biz user)
- *     tags: [Biz User]
+ *     summary: Register a new company admin (biz user) and create a company
+ *     tags: [A Biz User]
  *     requestBody:
  *       required: true
  *       content:
@@ -20,7 +19,6 @@ const router = Router();
  *               - email
  *               - password
  *               - companyName
- *               - phoneNumber
  *             properties:
  *               email:
  *                 type: string
@@ -31,15 +29,12 @@ const router = Router();
  *               companyName:
  *                 type: string
  *                 example: M's Tiki Bar
- *               phoneNumber:
- *                 type: string
- *                 example: "8085551234"
  *     responses:
  *       201:
  *         description: Biz user created successfully
  *       400:
  *         description: Missing or invalid fields
  */
-router.post(BIZ_USER_CREATE_PREFIX, createBizUser);
+router.post(BIZ_USER_SIGNUP_PREFIX, createBizUser); // ✅ No auth middleware here
 
 export default router;

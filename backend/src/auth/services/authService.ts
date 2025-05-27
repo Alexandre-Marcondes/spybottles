@@ -14,26 +14,25 @@ interface LoginInput {
   companyId?: string;
 }
 
-export const loginUserService = async (credentials: LoginInput) => {
-  const { email, password, companyId } = credentials;
-
-  // 🔍 Find the user
-  const user = await UserModel.findOne({ email });
+export const loginUserService = async ({ email, password, companyId }: LoginInput) => {
+  const user = await UserModel.findOne({ email }).exec() as any;
 
   if (!user || !bcrypt.compareSync(password, user.password)) {
     throw new Error('Invalid credentials');
   }
 
-  // ✅ Handle company or self-paid access
   let selectedCompanyId: string | null = null;
-
-  if (user.isSelfPaid && companyId) {
-  throw new Error('Self-paid users should not provide a companyId.');
- }
-
   const hasCompanies = Array.isArray(user.companies) && user.companies.length > 0;
 
-  if (hasCompanies) {
+  if (user.isSelfPaid) {
+    if (companyId) {
+      throw new Error('Self-paid users should not provide a companyId.');
+    }
+  } else {
+    if (!hasCompanies) {
+      throw new Error('No company associated and user is not self-paid.');
+    }
+
     selectedCompanyId =
       companyId || (user.companies.length === 1 ? user.companies[0].toString() : null);
 
@@ -41,18 +40,15 @@ export const loginUserService = async (credentials: LoginInput) => {
       throw new Error('Multiple companies found. Please specify companyId.');
     }
 
-    const companyIds = user.companies.map((id) => id.toString());
-    if (!companyIds.includes(selectedCompanyId)) {
+    const validCompanyIds = user.companies.map((id: { toString: () => any; }) => id.toString());
+    if (!validCompanyIds.includes(selectedCompanyId)) {
       throw new Error('User is not associated with the specified company.');
     }
-  } else if (!user.isSelfPaid) {
-    // ❌ Neither self-paid nor connected to a company
-    throw new Error('No company associated and user is not self-paid.');
   }
 
   // 🎫 Token Payload
   const payload = {
-    userId: user._id,
+    userId: user._id.toString(),
     email: user.email,
     role: user.role,
     companies: user.companies,
@@ -62,15 +58,13 @@ export const loginUserService = async (credentials: LoginInput) => {
 
   const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
 
-  // ✅ Send response
   return {
     token,
     user: {
-      userId: user._id,
       email: user.email,
       role: user.role,
-      currentCompany: selectedCompanyId,
       companies: user.companies,
+      currentCompany: selectedCompanyId,
       isSelfPaid: user.isSelfPaid,
       isActive: user.isActive,
     },

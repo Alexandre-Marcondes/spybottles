@@ -7,19 +7,24 @@ import {
 } from '../services/companyService';
 
 /**
- * Create a new company
+ * Create a new company (manual use by superAdmin)
  */
 export const createCompany = async (req: Request, res: Response): Promise<void> => {
   try {
     const { companyName } = req.body;
-    const createdBy = req.user?.userId;
+    const user = req.user;
 
-    if (!companyName) {
-      res.status(400).json({ message: 'Missing name or authentication' });
+    if (!user || user.role !== 'superAdmin') {
+      res.status(403).json({ message: 'Only super admins can create companies' });
       return;
     }
 
-    const company = await createCompanyService({ companyName, createdBy });
+    if (!companyName) {
+      res.status(400).json({ message: 'Company name is required' });
+      return;
+    }
+
+    const company = await createCompanyService({ companyName, createdBy: user.userId });
 
     res.status(201).json({
       _id: company._id,
@@ -33,11 +38,18 @@ export const createCompany = async (req: Request, res: Response): Promise<void> 
 };
 
 /**
- * Get company by ID
+ * Get company by ID (superAdmin or companyAdmin with matching company)
  */
 export const getCompanyById = async (req: Request, res: Response): Promise<void> => {
   try {
+    const user = req.user;
     const { id } = req.params;
+
+    if (!user || (user.role !== 'superAdmin' && user.currentCompany !== id)) {
+      res.status(403).json({ message: 'Access denied' });
+      return;
+    }
+
     const company = await getCompanyByIdService(id);
 
     if (!company) {
@@ -49,7 +61,7 @@ export const getCompanyById = async (req: Request, res: Response): Promise<void>
       _id: company._id,
       companyName: company.companyName,
       tier: company.tier,
-      users: company.users, // optionally filter out sensitive info per user
+      users: company.users, // Optionally filter user output
     });
   } catch (err) {
     console.error('Get Company Error:', err);
@@ -58,12 +70,19 @@ export const getCompanyById = async (req: Request, res: Response): Promise<void>
 };
 
 /**
- * Update company by ID
+ * Update company by ID (superAdmin or matching companyAdmin only)
  */
 export const updateCompany = async (req: Request, res: Response): Promise<void> => {
   try {
+    const user = req.user;
     const { id } = req.params;
-    const updatedCompany = await updateCompanyService(id, req.body);
+
+    if (!user || (user.role !== 'superAdmin' && user.currentCompany !== id)) {
+      res.status(403).json({ message: 'Access denied' });
+      return;
+    }
+
+    const updatedCompany = await updateCompanyService(id, req.body) as any;
 
     if (!updatedCompany) {
       res.status(404).json({ message: 'Company not found' });
@@ -71,7 +90,7 @@ export const updateCompany = async (req: Request, res: Response): Promise<void> 
     }
 
     res.status(200).json({
-      companyName: updatedCompany.companyName,
+      companyName: updatedCompany.name,
       tier: updatedCompany.tier,
       logo: updatedCompany.logo,
       isActive: updatedCompany.isActive,
@@ -83,12 +102,18 @@ export const updateCompany = async (req: Request, res: Response): Promise<void> 
 };
 
 /**
- * Invite user to company
+ * Invite user to company (companyAdmin only)
  */
 export const inviteUserToCompany = async (req: Request, res: Response): Promise<void> => {
   try {
+    const user = req.user;
     const { id: companyId } = req.params;
     const { email } = req.body;
+
+    if (!user || user.role !== 'companyAdmin' || user.currentCompany !== companyId) {
+      res.status(403).json({ message: 'Only company admins can invite users to their company' });
+      return;
+    }
 
     if (!email) {
       res.status(400).json({ message: 'Email is required to invite user' });
@@ -99,7 +124,7 @@ export const inviteUserToCompany = async (req: Request, res: Response): Promise<
 
     res.status(200).json({
       message: `Invitation sent to ${email}`,
-      invitedUserId: invite._id, // Optional
+      invitedUserId: invite._id,
     });
   } catch (err) {
     console.error('Invite User Error:', err);

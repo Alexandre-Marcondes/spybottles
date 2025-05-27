@@ -2,24 +2,27 @@ import { Request, Response } from 'express';
 import { createBizUserService } from '../services/bizUserService';
 
 /**
- * Create a new company admin (biz user)
+ * Register a new company admin (biz user) and create their company.
+ * This route does NOT require authentication.
  */
 export const createBizUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, companyName, phoneNumber } = req.body;
+    const { email, password, companyName } = req.body;
 
-    if (!email || !password || !companyName || !phoneNumber) {
-      res.status(400).json({ message: 'All fields are required' });
+    // 🔐 Validate required fields
+    if (!email || !password || !companyName) {
+      res.status(400).json({ message: 'Email, password, and company name are required.' });
       return;
     }
 
+    // 🏗 Create the user + company (tier = 'pro' by default)
     const { user, company } = await createBizUserService({
       email,
       password,
       companyName,
-      phoneNumber,
     });
 
+    // ✅ Respond with basic details
     res.status(201).json({
       email: user.email,
       role: user.role,
