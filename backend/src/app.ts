@@ -31,7 +31,7 @@ mongoose.connect(config.mongoUri)
 .then(() => {
   console.log('Connected to MOngoDB Atlas')
 }).catch ((err) => {
-  console.error('Mongo connection error', err);
+  console.error('Mongo connection error:', err);
 })
 
 // Enables Swagger UI at /docs route for interactive API documentation.

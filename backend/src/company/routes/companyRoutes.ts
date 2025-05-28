@@ -69,17 +69,18 @@ router.get(COMPANY_GET_ONE_PREFIX, authenticate, getCompanyById);
  * @swagger
  * /v1.0.0/company/{id}:
  *   put:
- *     summary: Update a company by ID
- *     tags: [Company]
+ *     summary: Update company info (name, locations only)
+ *     tags:
+ *       - Company
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
+ *         description: Company ID
  *         schema:
  *           type: string
- *         required: true
- *         description: MongoDB company ID
  *     requestBody:
  *       required: true
  *       content:
@@ -89,16 +90,17 @@ router.get(COMPANY_GET_ONE_PREFIX, authenticate, getCompanyById);
  *             properties:
  *               companyName:
  *                 type: string
- *               tier:
- *                 type: string
- *                 enum: [standard, pro, enterprise]
- *               logo:
- *                 type: string
+ *               locations:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
- *         description: Company updated
- *       404:
- *         description: Company not found
+ *         description: Successfully updated company
+ *       400:
+ *         description: Failed to update company
+ *       403:
+ *         description: Unauthorized
  */
 router.put(COMPANY_UPDATE_PREFIX, authenticate, updateCompany);
 

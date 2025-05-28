@@ -1,4 +1,4 @@
-import { CompanyModel } from '../models/companyModel';
+import { CompanyModel, Company } from '../models/companyModel';
 import { UserModel, UserRole } from '../../user/models/userModel';
 import { hashPassword } from '../../utils/authUtils';
 import mongoose from 'mongoose';
@@ -27,26 +27,50 @@ export const getCompanyByIdService = async (id: string) => {
   return await CompanyModel.findById(id).populate('users', 'email role');
 };
 
-// ✏️ Update company (only allowed fields)
-export const updateCompanyService = async (
-  id: string,
-  updates: Partial<{
-    name: string;
-    tier: string;
-    logo: string;
-  }>,
-  isWebhook = false // ✅ Add flag to explicitly allow tier update
-) => {
-  const allowedUpdates = { ...updates };
+export const updateCompanyService = async ({
+  companyId,
+  updateData,
+  role,
+}: {
+  companyId: string;
+  updateData: Partial<Company>;
+  role: string;
+}): Promise<Partial<Company>> => {
+  const allowedFields: (keyof Pick<Company, 'companyName' | 'locations'>)[] = [
+    'companyName',
+    'locations',
+  ];
 
-  // 🔐 Strip tier unless it's coming from a webhook (Stripe)
-  if (!isWebhook) {
-    delete (allowedUpdates as any).tier;
+  let safeUpdateData: Partial<Company> = {};
+
+  if (role === UserRole.SuperAdmin) {
+    // SuperAdmin can update anything
+    safeUpdateData = updateData;
+  } else {
+    // Only allow companyName and locations for companyAdmin
+    for (const key of allowedFields) {
+      if (key in updateData) {
+        safeUpdateData[key] = updateData[key] as any;
+      }
+    }
   }
 
-  return await CompanyModel.findByIdAndUpdate(id, allowedUpdates, { new: true });
-};
+  if (Object.keys(safeUpdateData).length === 0) {
+    throw new Error('No valid fields to update');
+  }
 
+  const updatedCompany = await CompanyModel.findByIdAndUpdate(
+    companyId,
+    safeUpdateData,
+    { new: true }
+  );
+
+  if (!updatedCompany) {
+    throw new Error('Company not found');
+  }
+
+  return updatedCompany;
+};
 
 // 👥 Invite a user to a company
 export const inviteUserToCompanyService = async ({

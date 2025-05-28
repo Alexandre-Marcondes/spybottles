@@ -5,10 +5,7 @@ if(!process.env.MONGO_URI) {
 export const config = {
     mongoUri: process.env.MONGO_URI || '',
     port: process.env.PORT || 3000,
-    watson: {
-      apiKey: process.env.WATSON_API_KEY || '',
-      url: process.env.WATSON_URL || '',
-    },
+  
     adminJwtSecret: process.env.ADMIN_JWT_SECRET || 'fallbackAdminSecret',
     // Add future keys below:
     // aws: {

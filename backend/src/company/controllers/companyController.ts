@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { UserPayload } from '../../types/auth';
 import {
   createCompanyService,
   getCompanyByIdService,
@@ -70,36 +71,42 @@ export const getCompanyById = async (req: Request, res: Response): Promise<void>
 };
 
 /**
- * Update company by ID (superAdmin or matching companyAdmin only)
+ * Update company information
+ * CompanyAdmins can update: companyName, locations
+ * SuperAdmins can update any field (e.g., tier)
  */
-export const updateCompany = async (req: Request, res: Response): Promise<void> => {
+export const updateCompany = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const user = req.user;
-    const { id } = req.params;
+    const companyId = req.params.id;
+    const updateData = req.body;
 
-    if (!user || (user.role !== 'superAdmin' && user.currentCompany !== id)) {
-      res.status(403).json({ message: 'Access denied' });
+    // ✅ Use safe cast to get user from req (inserted by authenticate middleware)
+    const user = req.user as UserPayload;
+    const userRole = user?.role;
+
+    if (!userRole) {
+      res.status(403).json({ message: 'Unauthorized: No role found' });
       return;
     }
 
-    const updatedCompany = await updateCompanyService(id, req.body) as any;
-
-    if (!updatedCompany) {
-      res.status(404).json({ message: 'Company not found' });
-      return;
-    }
-
-    res.status(200).json({
-      companyName: updatedCompany.name,
-      tier: updatedCompany.tier,
-      logo: updatedCompany.logo,
-      isActive: updatedCompany.isActive,
+    const updatedCompany = await updateCompanyService({
+      companyId,
+      updateData,
+      role: userRole,
     });
-  } catch (err) {
-    console.error('Update Company Error:', err);
+    res.status(200).json({
+      message: 'Company updated',
+      updatedFields: updateData, // only what was passed in
+});
+  } catch (err: any) {
+    console.error('❌ Error updating company:', err.message);
     res.status(400).json({ message: 'Failed to update company' });
   }
 };
+
 
 /**
  * Invite user to company (companyAdmin only)
