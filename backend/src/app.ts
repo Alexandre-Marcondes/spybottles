@@ -9,9 +9,7 @@ import { swaggerUi, swaggerSpec } from './utils/swagger';
 import mainRoutes from '../src/routes';
 import { config } from './config';
 
-import superAdminRoutes from './superAdmin/routes/superAdminRoutes';
-import superAdminUserRoutes from './superAdmin/routes/superAdminUserRoutes'
-
+import superAdminRoutes from './superAdmin/routes/';
 
 
 const app = express();
@@ -48,9 +46,6 @@ app.use('/', mainRoutes);
 // ✅ Step 3: Admin-only tools
 // ✅ Step 3: SuperAdmin-only tools
 app.use('/v1.0.0/super-admin', superAdminRoutes);
-app.use('/v1.0.0/super-admin/users', superAdminUserRoutes);
-
-
 
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
