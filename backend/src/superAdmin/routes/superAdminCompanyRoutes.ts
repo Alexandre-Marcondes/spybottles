@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createCompanyAsSuperAdmin } from '../controllers/superAdmincompanyController';
+import { createCompanyAsSuperAdmin } from '../controllers/superAdminCompanyController';
 import { authenticate } from '../../middleware/authMiddleware';
 import { isSuperAdmin } from '../../utils/isSuperAdmin';
 
@@ -8,12 +8,12 @@ const router = Router();
 
 /**
  * ✅ Only SuperAdmin can hit this
- * POST /v1.0.0/super-admin/company/create
+ * POST /v1.0.0/superAdmin/company/create
  */
 
 /**
  * @swagger
- * /v1.0.0/super-admin/company/create:
+ * /v1.0.0/superAdmin/company/create:
  *   post:
  *     summary: Create a new company (SuperAdmin only)
  *     tags:

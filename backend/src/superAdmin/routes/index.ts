@@ -1,13 +1,19 @@
+// src/superAdmin/routes/index.ts
 import { Router } from 'express';
 
-import superAdminCompanyRoutes from './superAdminRoutes';
+import superAdminCompanyRoutes from './superAdminCompanyRoutes';
 import superAdminUserRoutes from './superAdminUserRoutes';
-import superAdminRoutes from './superAdminRoutes';
-// Add more SuperAdmin modules here as needed
+import superAdminProductsRoutes from './superAdminProductsRoutes';
+
+import { SUPER_ADMIN_PRODUCT_ROUTE } from '../superAdminProductConstants';
+import { SUPER_ADMIN_USER_ROUTE } from '../superAdminUserConstants';
+import { SUPER_ADMIN_COMPANY_ROUTE } from '../superAdminCompanyConstants';
 
 const router = Router();
-router.use('/superAdmin', superAdminRoutes);
-router.use('/company', superAdminCompanyRoutes); // /v1.0.0/super-admin/company/...
-router.use('/users', superAdminUserRoutes);      // /v1.0.0/super-admin/users/...
+
+// Now we define sub-paths
+router.use(SUPER_ADMIN_PRODUCT_ROUTE , superAdminProductsRoutes);
+router.use(SUPER_ADMIN_USER_ROUTE, superAdminUserRoutes);  
+router.use(SUPER_ADMIN_COMPANY_ROUTE, superAdminCompanyRoutes);
 
 export default router;

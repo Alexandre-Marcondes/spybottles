@@ -1,51 +1,58 @@
 import { Request, Response } from 'express';
-import { isSuperAdmin } from '../../utils/isSuperAdmin';
 import {
   getAllUsersService,
   createUserService,
   deleteUserByIdService,
-} from '../services/superAdminUserService'; // Reuse your user services
+} from '../services/superAdminUserService';
 
 /**
- * Admin: Get all users
+ * SuperAdmin: Get all users
  */
 export const getAllUsersAdmin = async (req: Request, res: Response): Promise<void> => {
   try {
     const users = await getAllUsersService();
-    res.status(200).json(users);
+    res.status(200).json({ users });
   } catch (err) {
-    console.error('Admin Get All Users Error:', err);
+    console.error('🚫 Get All Users Failed:', err);
     res.status(500).json({ message: 'Failed to fetch users' });
   }
 };
 
 /**
- * Admin: Create user with any role
+ * SuperAdmin: Create user (self-paid or companyAdmin)
  */
 export const createUserAsAdmin = async (req: Request, res: Response): Promise<void> => {
   try {
-    const newUser = await createUserService(req.body);
-    res.status(201).json(newUser);
-  } catch (err) {
-    console.error('Admin Create User Error:', err);
-    res.status(400).json({ message: 'Failed to create user' });
+    const { user, company } = await createUserService(req.body);
+
+    const response = {
+      message: '✅ User created successfully',
+      user,
+      ...(company ? { company } : {}),
+    };
+
+    res.status(201).json(response);
+  } catch (err: any) {
+    console.error('🚫 Create User Failed:', err);
+    res.status(400).json({ message: err.message || 'Failed to create user' });
   }
 };
 
 /**
- * Admin: Delete user by ID
+ * SuperAdmin: Delete user
  */
 export const deleteUserAsAdmin = async (req: Request, res: Response): Promise<void> => {
   try {
     const deleted = await deleteUserByIdService(req.params.id);
+
     if (!deleted) {
       res.status(404).json({ message: 'User not found' });
       return;
     }
 
-    res.status(200).json({ message: 'User deleted' });
+    res.status(200).json({ message: '✅ User deleted successfully' });
   } catch (err) {
-    console.error('Admin Delete User Error:', err);
+    console.error('🚫 Delete User Failed:', err);
     res.status(500).json({ message: 'Failed to delete user' });
   }
 };

@@ -5,5 +5,5 @@ export const isCompanyAdmin = (req: Request): boolean => {
 };
 
 export const isSuperAdmin = (req: Request): boolean => {
-  return req.user?.role === 'superAdmin';
+  return req.user?.role === 'superadmin';
 };

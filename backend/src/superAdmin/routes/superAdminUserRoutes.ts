@@ -6,7 +6,6 @@ import {
   createUserAsAdmin,
   deleteUserAsAdmin,
 } from '../controllers/superAdminUserController';
-
 import {
   SUPER_ADMIN_USER_GET_ALL_PREFIX,
   SUPER_ADMIN_USER_CREATE_PREFIX,
@@ -15,29 +14,29 @@ import {
 
 const router = Router();
 
-// Admin GET all users
+// ✅ GET all users
 /**
  * @swagger
- * /v1.0.0/admin/users:
+ * /v1.0.0/superAdmin/users:
  *   get:
- *     summary: Super Admin - Get all users
+ *     summary: SuperAdmin - Get all users
  *     tags: [Super Admin User]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of all users
+ *         description: List of users
  *       403:
  *         description: Access denied
  */
 router.get(SUPER_ADMIN_USER_GET_ALL_PREFIX, authenticate, isSuperAdmin, getAllUsersAdmin);
 
-// Admin create user
-/**
+// ✅ POST: Create user (selfPaidUser or companyAdmin)
+ /**
  * @swagger
- * /v1.0.0/admin/users/create:
+ * /v1.0.0/superAdmin/users/create:
  *   post:
- *     summary: Super Admin - Create a new user with any role
+ *     summary: SuperAdmin - Create new user (selfPaid or companyAdmin)
  *     tags: [Super Admin User]
  *     security:
  *       - bearerAuth: []
@@ -50,60 +49,48 @@ router.get(SUPER_ADMIN_USER_GET_ALL_PREFIX, authenticate, isSuperAdmin, getAllUs
  *             required:
  *               - email
  *               - password
- *               - birthday
  *               - role
- *               - phoneNumber
- *               - location
  *             properties:
  *               email:
  *                 type: string
  *               password:
  *                 type: string
- *               birthday:
- *                 type: string
  *               role:
  *                 type: string
- *                 enum: [bartender, manager, admin, other]
- *               phoneNumber:
+ *                 enum: [selfPaidUser, companyAdmin]
+ *               companyName:
  *                 type: string
- *               bizId:
- *                 type: string
- *               location:
- *                 type: object
- *                 properties:
- *                   lat:
- *                     type: number
- *                   long:
- *                     type: number
+ *                 description: Required if role is companyAdmin
  *     responses:
  *       201:
- *         description: User created
+ *         description: User (and company if needed) created
+ *       400:
+ *         description: Bad input
  *       403:
- *         description: Access denied
+ *         description: Unauthorized
  */
 router.post(SUPER_ADMIN_USER_CREATE_PREFIX, authenticate, isSuperAdmin, createUserAsAdmin);
 
-// Admin delete user
+// ✅ DELETE user
 /**
  * @swagger
- * /v1.0.0/admin/users/{id}:
+ * /v1.0.0/superAdmin/users/{id}:
  *   delete:
- *     summary: Super Admin - Delete a user by ID
+ *     summary: SuperAdmin - Soft Delete user by ID
+ *     description: Marks the user as inactive instead of deleting from database.
  *     tags: [Super Admin User]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
- *         required: true
  *         schema:
  *           type: string
+ *         required: true
  *         description: MongoDB user ID
  *     responses:
  *       200:
  *         description: User deleted
- *       403:
- *         description: Access denied
  *       404:
  *         description: User not found
  */

@@ -1,45 +1,55 @@
+// src/middleware/authenticate.ts
+
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { UserPayload } from '../types/auth'; // ✅ Shared type
-import { fetchStripeStatus } from '../stripe/services/billingServices'; // ✅ NEW: For dynamic isPaid check
+import { config } from '../config';
+import { UserPayload } from '../types/auth'; // 👈 Shape: userId, email, role, etc.
 
 /**
- * Middleware to authenticate users via JWT
- * Adds user object to req.user using shared UserPayload type
+ * Universal JWT middleware that checks user identity and role
  */
-export const authenticate = async (
+export const authenticate = (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<void> => {
+): void => {
   const authHeader = req.headers.authorization;
 
+  // 🛑 No token provided
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ message: 'Unauthorized: No token provided' });
+    res.status(401).json({ message: 'No token provided' });
     return;
   }
 
+  // 🔐 Extract token
   const token = authHeader.split(' ')[1];
 
   try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error('JWT secret not configured');
+    // 🔍 Validate & decode token
+    const decoded = jwt.verify(token, config.jwtSecret) as unknown;
 
-    // ✅ Decode token using shared payload shape
-    const decoded = jwt.verify(token, secret) as UserPayload;
+    // ✅ Type guard: confirm expected fields
+    if (
+      typeof decoded !== 'object' ||
+      !decoded ||
+      !('userId' in decoded) ||
+      !('email' in decoded) ||
+      !('role' in decoded)
+    ) {
+      res.status(401).json({ message: 'Malformed token payload' });
+      return;
+    }
 
-    // ✅ NEW: Dynamically fetch isPaid status (from DB or Stripe)
-    const isPaid = await fetchStripeStatus(decoded.userId);
+    // ✅ Attach user to req
+    req.user = decoded as UserPayload;
 
-    // ✅ Attach to req.user using central UserPayload shape
-    req.user = {
-      ...decoded,
-      isPaid,
-    };
+    // 👀 Dev log only
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`🔐 Authenticated: ${req.user.email} (${req.user.role})`);
+    }
 
     next();
   } catch (err) {
-    console.error('Auth error:', err);
-    res.status(401).json({ message: 'Unauthorized: Invalid token' });
+    res.status(401).json({ message: 'Invalid or expired token' });
   }
 };

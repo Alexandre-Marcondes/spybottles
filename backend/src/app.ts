@@ -8,7 +8,7 @@ import bodyParser from 'body-parser';
 import { swaggerUi, swaggerSpec } from './utils/swagger';
 import mainRoutes from '../src/routes';
 import { config } from './config';
-
+import { SUPER_ADMIN_ROUTE } from './superAdmin/superAdminConstants'
 import superAdminRoutes from './superAdmin/routes/';
 
 
@@ -27,7 +27,7 @@ app.use(express.json());
 // connect to MongoDb Atlas
 mongoose.connect(config.mongoUri)
 .then(() => {
-  console.log('Connected to MOngoDB Atlas')
+  console.log('Connected to MongoDB Atlas')
 }).catch ((err) => {
   console.error('Mongo connection error:', err);
 })
@@ -45,7 +45,7 @@ app.use('/', mainRoutes);
 
 // ✅ Step 3: Admin-only tools
 // ✅ Step 3: SuperAdmin-only tools
-app.use('/v1.0.0/super-admin', superAdminRoutes);
+app.use(SUPER_ADMIN_ROUTE, superAdminRoutes);
 
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
