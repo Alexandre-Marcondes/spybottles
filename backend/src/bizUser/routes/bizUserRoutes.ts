@@ -7,7 +7,7 @@ const router = Router();
  * @swagger
  * /v1.0.0/biz-user/sign-up:
  *   post:
- *     summary: Register a new company admin (biz user) and create a company
+ *     summary: Register a new company admin and create their associated company
  *     tags: [A Biz User]
  *     requestBody:
  *       required: true
@@ -22,19 +22,24 @@ const router = Router();
  *             properties:
  *               email:
  *                 type: string
+ *                 format: email
  *                 example: mchinellato@restaurant.com
  *               password:
  *                 type: string
+ *                 format: password
  *                 example: securePass123
  *               companyName:
  *                 type: string
  *                 example: M's Tiki Bar
  *     responses:
  *       201:
- *         description: Biz user created successfully
+ *         description: ✅ Biz user and company created successfully
  *       400:
- *         description: Missing or invalid fields
+ *         description: 🚫 Validation failed – missing or invalid fields, or email already in use
+ *       500:
+ *         description: 🚫 Internal server error during signup
  */
+
 router.post(BIZ_USER_SIGNUP_PREFIX, createBizUser); // ✅ No auth middleware here
 
 export default router;

@@ -9,6 +9,12 @@ export enum UserRole {
   Other = 'other',
 }
 
+export interface PopulatedCompany {
+  _id: string;
+  companyName: string;
+}
+
+
 export enum SubscriptionStatus {
   ACTIVE = 'active',
   CANCELLED = 'cancelled',
@@ -33,6 +39,11 @@ export interface User extends Document {
   resetTokenExpires?: Date;
   subscriptionStatus?: SubscriptionStatus;
 }
+
+export type PopulatedUser = Omit<User, 'companies'> & {
+  _id: string;
+  companies: PopulatedCompany[];
+};
 
 const userSchema: Schema = new Schema({
 

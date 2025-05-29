@@ -26,7 +26,7 @@ export const createBizUser = async (req: Request, res: Response): Promise<void> 
     res.status(201).json({
       email: user.email,
       role: user.role,
-      companyId: company._id,
+      companyId: company.companyName,
     });
   } catch (err) {
     console.error('Create BizUser Error:', err);

@@ -38,7 +38,7 @@ export const createUserService = async ({
     if (!companyName) throw new Error('Company name is required for companyAdmin');
 
     const company = new CompanyModel({
-      name: companyName,
+      companyName,
       createdBy: user._id,
       users: [user._id],
       tier: 'pro',

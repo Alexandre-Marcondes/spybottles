@@ -12,7 +12,7 @@ export const createCompanyService = async ({
   createdBy: string;
 }) => {
   const company = new CompanyModel({
-    name: companyName, // 👈 use `name` not `companyName`
+    companyName, // 👈 use `name` not `companyName`
     createdBy,
     users: [createdBy],
     tier: 'pro', // ✅ Default tier

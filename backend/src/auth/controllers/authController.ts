@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { loginUserService } from '../services/authService';
 
 /**
- * Controller: Handle login and return JWT + user context (no userId exposed)
+ * Controller: Handle login and return JWT + user context (no raw userId exposed)
  */
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -16,7 +16,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     const result = await loginUserService({ email, password });
 
     if (!result.user.isActive) {
-      res.status(403).json({ message: 'Account is deactivated' });
+      res.status(403).json({ message: 'Account is deactivated.' });
       return;
     }
 
@@ -26,11 +26,16 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
         email: result.user.email,
         role: result.user.role,
         isSelfPaid: result.user.isSelfPaid,
+        isActive: result.user.isActive,
         currentCompany: result.user.currentCompany,
-      },
+        companies: result.user.companies.map((company) => ({
+            companyId: company._id,
+            companyName: company.companyName,
+          })),
+        },
     });
   } catch (err) {
     console.error('Login error:', err);
-    res.status(401).json({ message: 'Invalid credentials' });
+    res.status(401).json({ message: 'Invalid credentials.' });
   }
 };

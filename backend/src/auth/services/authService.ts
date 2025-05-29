@@ -1,57 +1,58 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { UserModel } from '../../user/models/userModel';
+import { UserModel, User } from '../../user/models/userModel';
+import { PopulatedUser } from '../../user/models/userModel';
 
+// 🔐 Ensure JWT_SECRET is present
 if (!process.env.JWT_SECRET) {
   throw new Error('Missing JWT_SECRET in environment variables');
 }
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+// 🧾 Input type for login
 interface LoginInput {
   email: string;
   password: string;
-  companyId?: string;
 }
 
-export const loginUserService = async ({ email, password, companyId }: LoginInput) => {
-  const user = await UserModel.findOne({ email }).exec() as any;
+// 🔐 Login service: Validates credentials and returns token + user context
+export const loginUserService = async ({ email, password }: LoginInput) => {
+  // 📦 Fetch user by email
+  const user = await UserModel.findOne({ email })
+    .populate('companies', 'companyName') // Optional: pulls in company names
+    .exec() as unknown as PopulatedUser;
 
   if (!user || !bcrypt.compareSync(password, user.password)) {
     throw new Error('Invalid credentials');
   }
 
-  let selectedCompanyId: string | null = null;
   const hasCompanies = Array.isArray(user.companies) && user.companies.length > 0;
 
+  let selectedCompanyId: string | null = null;
+
+  // 👤 Self-paid users must not have companies
   if (user.isSelfPaid) {
-    if (companyId) {
-      throw new Error('Self-paid users should not provide a companyId.');
+    if (hasCompanies) {
+      throw new Error('Self-paid users should not belong to any company.');
     }
   } else {
+    // 🏢 Company user: must have at least one company
     if (!hasCompanies) {
-      throw new Error('No company associated and user is not self-paid.');
+      throw new Error('No company associated with user and not self-paid.');
     }
 
+    // ✅ Auto-select if only one company, otherwise return null (frontend should prompt)
     selectedCompanyId =
-      companyId || (user.companies.length === 1 ? user.companies[0].toString() : null);
-
-    if (!selectedCompanyId) {
-      throw new Error('Multiple companies found. Please specify companyId.');
-    }
-
-    const validCompanyIds = user.companies.map((id: { toString: () => any; }) => id.toString());
-    if (!validCompanyIds.includes(selectedCompanyId)) {
-      throw new Error('User is not associated with the specified company.');
-    }
+      user.companies.length === 1 ? user.companies[0]._id.toString() : null;
   }
 
-  // 🎫 Token Payload
+  // 🎫 JWT payload
   const payload = {
     userId: user._id.toString(),
     email: user.email,
     role: user.role,
-    companies: user.companies,
+    companies: user.companies.map((company: any) => company._id),
     currentCompany: selectedCompanyId,
     isSelfPaid: user.isSelfPaid,
   };
@@ -63,10 +64,10 @@ export const loginUserService = async ({ email, password, companyId }: LoginInpu
     user: {
       email: user.email,
       role: user.role,
-      companies: user.companies,
-      currentCompany: selectedCompanyId,
       isSelfPaid: user.isSelfPaid,
       isActive: user.isActive,
+      currentCompany: selectedCompanyId,
+      companies: user.companies,
     },
   };
 };
