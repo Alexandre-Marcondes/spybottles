@@ -41,6 +41,7 @@ export const createBizUserService = async ({
       createdBy: newUser._id as Types.ObjectId,
       users: [newUser._id],
       tier: 'pro',
+      isPaid: true,
     });
 
     await newCompany.save({ session });

@@ -10,6 +10,7 @@ import {
 } from '../services/sessionService';
 import InventorySessionModel, { SessionStatus } from '../models/sessionModel';
 import { inventorySessionSchema } from '../validators/sessionValidator';
+import { voiceAddToSessionService } from '../services/voiceService';
 
 /**
  * Controller to start a new inventory session
@@ -423,39 +424,20 @@ export const voiceAddToSession = async (
       return;
     }
 
-    // 🔍 Extract product + quantities
-    const { productId, quantity_full, quantity_partial } = await parseVoiceTranscript(
-      transcript,
-      userId
-    );
-
-    // ⚙️ Call update service with the parsed item
-    const updatedSession = await updateInventorySession(sessionId, userId, {
-      items: [
-        {
-          productId,
-          quantity_full,
-          quantity_partial,
-        },
-      ],
-    });
-
-    if (!updatedSession) {
-      res.status(404).json({ message: 'Session not found or not owned by user' });
-      return;
-    }
+    const updatedSession = await voiceAddToSessionService(userId, sessionId, transcript);
 
     res.status(200).json({
       message: 'Item added or updated from voice input',
       data: updatedSession,
     });
   } catch (error: any) {
-    if (error.message === 'No matching product found') {
-      res.status(404).json({ message: 'No matching product found in database' });
+    if (error.message.includes('not owned')) {
+      res.status(404).json({ message: error.message });
+    } else if (error.message.includes('No matching product')) {
+      res.status(404).json({ message: error.message });
     } else {
       console.error('❌ voiceAddToSession error:', error);
       res.status(500).json({ message: 'Server error during voice-based session update' });
     }
   }
 };
-

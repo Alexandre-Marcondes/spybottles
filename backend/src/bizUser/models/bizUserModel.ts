@@ -2,7 +2,6 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface BizUser extends Document {
   companyName: string;
-  isPaid: boolean;
   ownerId: Types.ObjectId; // Refers to the company admin user
   employees: Types.ObjectId[]; // List of User IDs
   maxInvites: number;
@@ -16,10 +15,6 @@ const bizUserSchema: Schema = new Schema(
       type: String,
       required: true,
       unique: true,
-    },
-    isPaid: {
-      type: Boolean,
-      default: false,
     },
     ownerId: {
       type: Schema.Types.ObjectId,

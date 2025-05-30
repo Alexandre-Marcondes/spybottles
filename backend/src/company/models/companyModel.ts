@@ -12,6 +12,7 @@ export interface Company extends Document {
   companyName: string;
   createdBy: Types.ObjectId;
   users?: Types.ObjectId[];
+  isPaid: boolean;
   tier?: CompanyTier;
   logo?: string;
   locations?: string[];
@@ -39,6 +40,10 @@ const companySchema: Schema = new Schema(
         ref: 'User',
       },
     ],
+     isPaid: {
+      type: Boolean,
+      default: false,
+    },
     tier: {
       type: String,
       enum: Object.values(CompanyTier),

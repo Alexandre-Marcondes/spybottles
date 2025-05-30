@@ -1,9 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { BizUserModel } from '../bizUser/models/bizUserModel';
+import { CompanyModel } from '../company/models/companyModel';
 
 /**
- * Middleware to block access for unpaid users or companies.
- * Allows superAdmins, paid self-paid users, and users from paid companies.
+ * Middleware: Restrict access if the user or their company is unpaid.
+ * 
+ * - ✅ Allows superAdmins by default
+ * - ✅ Allows self-paid users (checked via user.isPaid)
+ * - ✅ Allows company users if their currentCompany is marked as isPaid
  */
 export const restrictIfUnpaid = async (
   req: Request,
@@ -11,38 +14,44 @@ export const restrictIfUnpaid = async (
   next: NextFunction
 ): Promise<void> => {
   const user = req.user;
+  
+  if (!user) {
+    return next();
+  }
+  console.log('🔎 currentCompany from token:', user.currentCompany);
 
-  // ✅ Allow superAdmin always
+
+  // 🛡 Allow SuperAdmins to bypass payment checks
   if (user?.role === 'superAdmin') {
     return next();
   }
-
-  // ✅ Self-paid users — check isPaid from injected auth
+  
+  // 🧾 Self-paid individual users
   if (user?.isSelfPaid) {
     if (user.isPaid) {
       return next();
     } else {
-      res.status(402).json({ message: 'Personal subscription required.' });
+      res.status(402).json({ message: 'Self-paid subscription required.' });
       return;
     }
   }
 
-  // ❌ No company attached
+  // ❌ Block if no current company is attached to the token
   if (!user?.currentCompany) {
     res.status(403).json({ message: 'No company context. Access denied.' });
     return;
   }
 
   try {
-    // ✅ Check if their company is paid
-    const bizUser = await BizUserModel.findById(user.currentCompany);
+    // 🏢 Company-based user: Check if their company is paid
+    const company = await CompanyModel.findById(user.currentCompany);
 
-    if (!bizUser || !bizUser.isPaid) {
+    if (!company || !company.isPaid) {
       res.status(402).json({ message: 'Company subscription is required.' });
       return;
     }
 
-    // ✅ All good
+    // ✅ All checks passed
     next();
   } catch (err) {
     console.error('Subscription check failed:', err);

@@ -1,11 +1,15 @@
 import ExcelJS from 'exceljs';
-import { wordsToNumbers } from 'words-to-numbers';
 import InventorySessionModel, { InventorySession, SessionStatus } from '../models/sessionModel';
-import  ProductModel, { Product}  from '../../product/models/productModel';
-// import { parseWordNumber, parseDecimalWord } from '../../utils/wordToNumber';
+import  ProductModel from '../../product/models/productModel';
+import { GlobalProduct } from '../../globalProduct/models/globalProductModel';
 import { generateTempProductId } from '../../utils/generateTempID';
 import TempProductModel from '../../superAdmin/models/tempProductModel';
 import { SessionItem } from '../models/sessionModel';
+import { extractNameAndQuantities,
+  findGlobalProductMatch,
+  generateMessage,
+  getFuzzyGlobalSuggestions,
+} from '../utils/voiceParserUtils';
 
 interface CreateSessionInput {
   userId: string;
@@ -22,32 +26,6 @@ interface CreateSessionInput {
     quantity_partial?: number;
   }[];
 }
-
-// export const createInventorySession = async (
-//   data: CreateSessionInput
-// ): Promise<InventorySession> => {
-//   const normalizedItems = data.items.map((item) => {
-//     const isMissing = !item.productId;
-//     const isTemp = typeof item.productId === 'string' && item.productId.startsWith('temp');
-
-//     return {
-//       productId: isMissing ? generateTempProductId() : item.productId,
-//       quantity_full: item.quantity_full,
-//       quantity_partial: item.quantity_partial,
-//       isTemp: isMissing || isTemp,
-//     };
-//   });
-//   const newSession = new InventorySessionModel({
-//     userId: data.userId,
-//     location: data.location,
-//     notes: data.notes,
-//     items: normalizedItems,
-//   });
-
-//   return await newSession.save();
-
-// };
-
 
 /**
  * Service function to create and save a new inventory session
@@ -126,18 +104,6 @@ export const getSessionByIdService = async (
   });
 };
 
-// ******* OLD FUNCTION BEFORE TEMP_ID *************
-// export const updateInventorySession = async (
-//   sessionId: string,
-//   userId: string,
-//   updates: Partial<InventorySession>
-// ): Promise<InventorySession | null> => {
-//   return await InventorySessionModel.findOneAndUpdate(
-//     { _id: sessionId, userId },
-//     { $set: updates },
-//     { new: true } // return updated document
-//   );
-// };
 export const updateInventorySession = async (
   sessionId: string,
   userId: string,
@@ -275,9 +241,30 @@ export const exportSessionsToExcel = async (
   return buffer as unknown as ArrayBuffer;
 };
 
+export const cloneGlobalToUser = async (
+  globalProduct: GlobalProduct,
+  userId: string
+) => {
+  const cloned = {
+    ...globalProduct.toObject(),
+    _id: undefined, // prevent Mongo duplicate _id
+    userId,
+    globalProductId: globalProduct._id,
+    isTemp: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  return await new ProductModel(cloned).save();
+};
+// src/sessions/services/sessionService.ts (or extract to its own parser utils folder)
+
 /**
- * Parses a voice transcript to extract productId and quantity.
- * Assumes full and partial quantities must be spoken separately.
+ * New voice parser with global fallback + temp logic + suggestions
+ */
+/**
+ * Parses a voice transcript to extract product info and quantity.
+ * Follows global → user → temp fallback logic.
  */
 export const parseVoiceTranscript = async (
   transcript: string,
@@ -287,67 +274,68 @@ export const parseVoiceTranscript = async (
   quantity_full: number;
   quantity_partial: number;
   message: string;
+  isTemp?: boolean;
+  suggestions?: string[];
 }> => {
   const cleaned = transcript.trim().toLowerCase().replace(/-/g, ' ');
 
-  let quantity_full = 0;
-  let quantity_partial = 0;
-
-  // ✅ Match product from DB
-  const products: Product[] = await ProductModel.find({ userId });
-
-  const matchedProduct = products.find((p) => {
-    const brand = p.brand?.toLowerCase() || '';
-    const variant = p.variant?.toLowerCase() || '';
-    return cleaned.includes(brand) && (variant === '' || cleaned.includes(variant));
-  });
-
-  if (!matchedProduct) {
-    throw new Error('No matching product found');
-  }
-
-  const brand = matchedProduct.brand?.toLowerCase() || '';
-  const variant = matchedProduct.variant?.toLowerCase() || '';
-
-  // ✅ Extract full quantity (e.g., "twenty eight bottles")
-  const fullMatch = cleaned.match(/(?:^|\s)([a-z\s\d]+?)(?=\s+(bottles?|full))/i);
-  if (fullMatch && fullMatch[1]) {
-    const rawFull = fullMatch[1].trim();
-    const withoutProduct = rawFull.replace(brand, '').replace(variant, '').trim();
-    const parsed = wordsToNumbers(withoutProduct, { fuzzy: true });
-    if (typeof parsed === 'number') {
-      quantity_full = parsed;
-    }
-  }
-
-  // ✅ Extract partial quantity (e.g., "point seven")
-  const partialMatch = cleaned.match(/point\s?([a-z\d\s]+)/);
-  if (partialMatch && partialMatch[1]) {
-    let rawPartial = partialMatch[1].trim();
-    rawPartial = rawPartial.replace(/bottles?|full/, '').trim();
-    const parsed = wordsToNumbers(rawPartial, { fuzzy: true });
-    if (typeof parsed === 'number') {
-      const divisor = parsed <= 9 ? 10 : 100;
-      const forcedDecimal = parsed / divisor;
-      quantity_partial = parseFloat(forcedDecimal.toFixed(2));
-    }
-  }
-
-  // ✅ Guidance message (since full+partial never happen together yet)
-  let message = '';
-
-  if (quantity_full === 0 && quantity_partial > 0) {
-    message = "Partial quantity detected. If you also meant full bottles, please say that separately.";
-  } else if (quantity_full > 0 && quantity_partial === 0) {
-    message = "Full quantity detected. If there are partials, say 'point five' in a separate sentence.";
-  } else if (quantity_full === 0 && quantity_partial === 0) {
-    message = "No quantity detected. Please try again.";
-  }
-
-  return {
-    productId: matchedProduct._id.toString(),
+  // 1️⃣ Extract product name and quantities from transcript
+  const {
+    productName,
     quantity_full,
     quantity_partial,
-    message,
+  } = await extractNameAndQuantities(cleaned);
+
+  // 2️⃣ Check for global product match (brand + variant if possible)
+  const globalMatches = await findGlobalProductMatch(productName);
+  if (globalMatches.length > 0) {
+    const match = globalMatches[0];
+
+    // Check if user already has this global product
+    const existing = await ProductModel.findOne({
+      userId,
+      globalProductId: match._id,
+    });
+
+    // Reuse or clone to user
+    const userProduct = existing || await cloneGlobalToUser(match, userId);
+
+    return {
+      productId: userProduct._id.toString(),
+      quantity_full,
+      quantity_partial,
+      message: generateMessage(quantity_full, quantity_partial),
+    };
+  }
+
+  // 3️⃣ No global match — offer fuzzy suggestions if available
+  const suggestions = await getFuzzyGlobalSuggestions(productName);
+  if (suggestions.length > 0) {
+    return {
+      productId: '',
+      quantity_full,
+      quantity_partial,
+      isTemp: true,
+      message: 'No direct match. Did you mean one of these?',
+      suggestions,
+    };
+  }
+
+  // 4️⃣ No matches — create a temporary product for this user
+  const tempProduct = new ProductModel({
+    userId,
+    brand: productName,
+    isTemp: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  await tempProduct.save();
+
+  return {
+    productId: tempProduct._id.toString(),
+    quantity_full,
+    quantity_partial,
+    isTemp: true,
+    message: 'Product saved as temp item. SuperAdmin will review it soon.',
   };
 };
