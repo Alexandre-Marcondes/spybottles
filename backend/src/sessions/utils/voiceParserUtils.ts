@@ -1,5 +1,4 @@
 // src/sessions/utils/voiceParserUtils.ts
-
 import { wordsToNumbers } from 'words-to-numbers';
 import { smartMatchGlobalProduct } from '../../globalProduct/services/globalProductService';
 import ProductModel from '../../product/models/productModel';
@@ -34,6 +33,7 @@ export const parseVoiceTranscript = async (
       globalProductId: match._id,
       brand: match.brand,
       variant: match.variant,
+      category: match.category,
       isTemp: false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -46,10 +46,13 @@ export const parseVoiceTranscript = async (
       quantity_full,
       quantity_partial,
       message: generateMessage(quantity_full, quantity_partial),
+      brand: userProduct.brand,
+      variant: userProduct.variant,
+      category: userProduct.category,
     };
   }
-  // 🧠 Add this fallback before creating a temp product
-if (globalMatches.length === 0) {
+
+  // Step 3: Suggestions fallback
   const suggestions = await smartMatchGlobalProduct(productName);
   if (suggestions.length > 0) {
     return {
@@ -63,9 +66,8 @@ if (globalMatches.length === 0) {
       message: 'No exact match. Did you mean one of these?',
     };
   }
-}
 
-  // Step 3: No match — create temp product
+  // Step 4: No match — create temp product
   const tempProduct = new ProductModel({
     userId,
     brand: productName,
@@ -81,6 +83,7 @@ if (globalMatches.length === 0) {
     quantity_partial,
     isTemp: true,
     message: 'No match found. Product saved as temp item.',
+    brand: productName,
   };
 };
 

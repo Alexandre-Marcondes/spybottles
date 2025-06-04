@@ -31,13 +31,11 @@ export const addGlobalProductHandler = async (req: Request, res: Response) => {
 // PUT /global-products/:id
 export const updateGlobalProductHandler = async (req: Request, res: Response) => {
   const { id } = req.params;
-
   try {
     const updated = await updateGlobalProduct(id, req.body);
     if (!updated) {
       return res.status(404).json({ message: 'Product not found' });
     }
-
     res.status(200).json(updated);
   } catch (error) {
     logger.error('Error updating global product', { error });

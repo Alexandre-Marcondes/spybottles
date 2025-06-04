@@ -42,6 +42,9 @@ export interface ParseResult {
   isTemp?: boolean;
   suggestions?: string[];
   message?: string;
+  brand?: string;
+  variant?: string;
+  category?: string;
 }
 
   

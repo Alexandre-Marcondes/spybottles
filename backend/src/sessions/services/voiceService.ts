@@ -19,16 +19,19 @@ export const voiceAddToSessionService = async (
     isTemp,
     suggestions,
     message,
+    brand,
+    variant,
   } = await parseVoiceTranscript(transcript, userId);
 
   if (!productId) {
-    // Optional: log or handle suggestion feedback here
     throw new Error(
       suggestions?.length
         ? `${message} Suggestions: ${suggestions.join(', ')}`
         : 'Unable to identify product from speech.'
     );
   }
+
+  const displayName = variant ? `${brand} ${variant}` : brand;
 
   const updatedSession = await updateInventorySession(sessionId, userId, {
     items: [
@@ -37,6 +40,7 @@ export const voiceAddToSessionService = async (
         quantity_full,
         quantity_partial,
         isTemp,
+        name: displayName, // 👈 inject human-readable product name
       },
     ],
   });

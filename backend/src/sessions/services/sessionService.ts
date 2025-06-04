@@ -136,6 +136,7 @@ export const updateInventorySession = async (
           isTemp:
             !updateItem.productId ||
             updateItem.productId?.toString().startsWith('temp'),
+            name: updateItem.name || '',
         });
       }
     }

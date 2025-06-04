@@ -146,8 +146,6 @@ router.post(SESSION_PARSE_VOICE_PREFIX,
  *     responses:
  *       200:
  *         description: Item successfully parsed and added/updated in session
- *       400:
- *         description: No matching product found or invalid transcript
  *         content:
  *           application/json:
  *             schema:
@@ -155,11 +153,12 @@ router.post(SESSION_PARSE_VOICE_PREFIX,
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "No valid product found. Please review suggestions."
- *                 suggestions:
- *                   type: array
- *                   items:
- *                     type: string
+ *                   example: "Item added or updated from voice input"
+ *                 data:
+ *                   type: object
+ *                   description: Updated session document
+ *       400:
+ *         description: No matching product found or invalid transcript
  *       401:
  *         description: Unauthorized
  *       404:
