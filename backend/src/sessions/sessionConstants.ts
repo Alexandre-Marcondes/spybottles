@@ -33,4 +33,15 @@ export const SESSION_PARSE_VOICE_PATH =
 
 export const SESSION_VOICE_ADD_PREFIX = '/:id/voice-add';
 export const SESSION_VOICE_ADD_PATH = SESSION_ROUTE + SESSION_VOICE_ADD_PREFIX;
+
+// ✅ Canonical definition
+export interface ParseResult {
+  productId: string;
+  quantity_full: number;
+  quantity_partial: number;
+  isTemp?: boolean;
+  suggestions?: string[];
+  message?: string;
+}
+
   

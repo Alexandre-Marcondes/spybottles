@@ -1,11 +1,91 @@
 // src/sessions/utils/voiceParserUtils.ts
 
 import { wordsToNumbers } from 'words-to-numbers';
-import GlobalProductModel from '../../globalProduct/models/globalProductModel';
-import { GlobalProduct } from '../../globalProduct/models/globalProductModel';
+import { smartMatchGlobalProduct } from '../../globalProduct/services/globalProductService';
+import ProductModel from '../../product/models/productModel';
+import { ParseResult } from '../sessionConstants';
 
 /**
- * Extracts the product name and quantities (full and partial) from a transcript.
+ * Parses the transcript and returns quantities + matched product (or temp).
+ */
+export const parseVoiceTranscript = async (
+  transcript: string,
+  userId: string
+): Promise<ParseResult> => {
+  const cleaned = transcript.trim().toLowerCase().replace(/-/g, ' ');
+
+  // Step 1: Extract quantities and product name
+  const { productName, quantity_full, quantity_partial } =
+    await extractNameAndQuantities(cleaned);
+
+  // Step 2: Try to match against global products
+  const globalMatches = await smartMatchGlobalProduct(productName);
+  if (globalMatches.length > 0) {
+    const match = globalMatches[0];
+
+    // Check if user already has this product
+    const existing = await ProductModel.findOne({
+      userId,
+      globalProductId: match._id,
+    });
+
+    const userProduct = existing || new ProductModel({
+      userId,
+      globalProductId: match._id,
+      brand: match.brand,
+      variant: match.variant,
+      isTemp: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    if (!existing) await userProduct.save();
+
+    return {
+      productId: userProduct._id.toString(),
+      quantity_full,
+      quantity_partial,
+      message: generateMessage(quantity_full, quantity_partial),
+    };
+  }
+  // 🧠 Add this fallback before creating a temp product
+if (globalMatches.length === 0) {
+  const suggestions = await smartMatchGlobalProduct(productName);
+  if (suggestions.length > 0) {
+    return {
+      productId: '',
+      quantity_full,
+      quantity_partial,
+      isTemp: true,
+      suggestions: suggestions.map(
+        s => `${s.brand}${s.variant ? ' ' + s.variant : ''}`
+      ),
+      message: 'No exact match. Did you mean one of these?',
+    };
+  }
+}
+
+  // Step 3: No match — create temp product
+  const tempProduct = new ProductModel({
+    userId,
+    brand: productName,
+    isTemp: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  await tempProduct.save();
+
+  return {
+    productId: tempProduct._id.toString(),
+    quantity_full,
+    quantity_partial,
+    isTemp: true,
+    message: 'No match found. Product saved as temp item.',
+  };
+};
+
+/**
+ * Extracts product name and quantities (full and partial) from transcript.
  */
 export const extractNameAndQuantities = async (
   transcript: string
@@ -19,21 +99,16 @@ export const extractNameAndQuantities = async (
 
   const fullMatch = transcript.match(/(?:^|\s)([a-z\s\d]+?)(?=\s+(bottles?|full))/i);
   if (fullMatch && fullMatch[1]) {
-    const rawFull = fullMatch[1].trim();
-    const parsed = wordsToNumbers(rawFull, { fuzzy: true });
-    if (typeof parsed === 'number') {
-      quantity_full = parsed;
-    }
+    const parsed = wordsToNumbers(fullMatch[1].trim(), { fuzzy: true });
+    if (typeof parsed === 'number') quantity_full = parsed;
   }
 
   const partialMatch = transcript.match(/point\s?([a-z\d\s]+)/);
   if (partialMatch && partialMatch[1]) {
-    const rawPartial = partialMatch[1].trim();
-    const parsed = wordsToNumbers(rawPartial, { fuzzy: true });
+    const parsed = wordsToNumbers(partialMatch[1].trim(), { fuzzy: true });
     if (typeof parsed === 'number') {
       const divisor = parsed <= 9 ? 10 : 100;
-      const forcedDecimal = parsed / divisor;
-      quantity_partial = parseFloat(forcedDecimal.toFixed(2));
+      quantity_partial = parseFloat((parsed / divisor).toFixed(2));
     }
   }
 
@@ -46,49 +121,20 @@ export const extractNameAndQuantities = async (
 };
 
 /**
- * Finds exact match in GlobalProduct collection.
- */
-export const findGlobalProductMatch = async (
-  productName: string
-): Promise<GlobalProduct[]> => {
-  const terms = productName.split(' ').filter(Boolean);
-
-  const query = {
-    $or: [
-      { brand: { $in: terms } },
-      { variant: { $in: terms } },
-    ],
-  };
-
-  return await GlobalProductModel.find(query).limit(3);
-};
-
-/**
- * Returns a message based on parsed quantities.
+ * Builds a helpful UX message based on quantities.
  */
 export const generateMessage = (
   full: number,
   partial: number
 ): string => {
   if (full === 0 && partial > 0) {
-    return 'Partial quantity detected. If you also meant full bottles, please say that separately.';
+    return 'Partial quantity detected. Say full bottles separately if needed.';
   }
   if (full > 0 && partial === 0) {
-    return "Full quantity detected. If there are partials, say 'point five' in a separate sentence.";
+    return 'Full quantity detected. Mention partials if any.';
   }
   if (full === 0 && partial === 0) {
     return 'No quantity detected. Please try again.';
   }
   return 'Quantity parsed successfully.';
-};
-
-/**
- * Returns fuzzy suggestions based on partial product name match.
- */
-export const getFuzzyGlobalSuggestions = async (
-  productName: string
-): Promise<string[]> => {
-  const regex = new RegExp(productName.split(' ')[0], 'i');
-  const matches = await GlobalProductModel.find({ brand: regex }).limit(5);
-  return matches.map((p) => `${p.brand} ${p.variant || ''}`.trim());
 };

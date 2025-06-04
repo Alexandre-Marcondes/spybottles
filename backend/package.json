@@ -9,7 +9,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon",
     "build": "tsc",
-    "start": "node dist/app.js"
+    "start": "node dist/app.js",
+    "seed:global": "ts-node tempScript/seedGlobalProducts.ts"
   },
   "keywords": [],
   "author": "",

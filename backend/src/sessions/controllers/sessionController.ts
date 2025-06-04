@@ -393,19 +393,24 @@ export const parseVoiceInput = async (
 
     const result = await parseVoiceTranscript(transcript, userId);
 
+    if (!result.productId) {
+      res.status(400).json({
+        statusMessage: 'No valid product found. Please review suggestions.',
+        ...result,
+      });
+      return;
+    }
+
     res.status(200).json({
       message: 'Parsed successfully',
-      data: result, // includes productId, quantity_full, quantity_partial
+      data: result,
     });
   } catch (error: any) {
-    if (error.message === 'No matching product found') {
-      res.status(404).json({ message: 'No matching product found' });
-    } else {
-      console.error('❌ Voice parsing failed:', error);
-      res.status(500).json({ message: 'Server error parsing transcript' });
-    }
+    console.error('❌ Voice parsing failed:', error);
+    res.status(500).json({ message: 'Server error parsing transcript' });
   }
 };
+
 
 /**
  * Controller: Parse voice and update session items

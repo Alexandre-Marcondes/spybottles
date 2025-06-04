@@ -6,10 +6,10 @@ import { generateTempProductId } from '../../utils/generateTempID';
 import TempProductModel from '../../superAdmin/models/tempProductModel';
 import { SessionItem } from '../models/sessionModel';
 import { extractNameAndQuantities,
-  findGlobalProductMatch,
   generateMessage,
-  getFuzzyGlobalSuggestions,
 } from '../utils/voiceParserUtils';
+import { smartMatchGlobalProduct } from '../../globalProduct/services/globalProductService';
+import { ParseResult } from '../sessionConstants';
 
 interface CreateSessionInput {
   userId: string;
@@ -269,14 +269,7 @@ export const cloneGlobalToUser = async (
 export const parseVoiceTranscript = async (
   transcript: string,
   userId: string
-): Promise<{
-  productId: string;
-  quantity_full: number;
-  quantity_partial: number;
-  message: string;
-  isTemp?: boolean;
-  suggestions?: string[];
-}> => {
+): Promise<ParseResult> => {
   const cleaned = transcript.trim().toLowerCase().replace(/-/g, ' ');
 
   // 1️⃣ Extract product name and quantities from transcript
@@ -286,18 +279,17 @@ export const parseVoiceTranscript = async (
     quantity_partial,
   } = await extractNameAndQuantities(cleaned);
 
-  // 2️⃣ Check for global product match (brand + variant if possible)
-  const globalMatches = await findGlobalProductMatch(productName);
+  // 2️⃣ Try to find an exact global product match
+  const globalMatches = await smartMatchGlobalProduct(productName);
   if (globalMatches.length > 0) {
     const match = globalMatches[0];
 
-    // Check if user already has this global product
+    // Reuse or clone a user-specific product
     const existing = await ProductModel.findOne({
       userId,
       globalProductId: match._id,
     });
 
-    // Reuse or clone to user
     const userProduct = existing || await cloneGlobalToUser(match, userId);
 
     return {
@@ -308,8 +300,8 @@ export const parseVoiceTranscript = async (
     };
   }
 
-  // 3️⃣ No global match — offer fuzzy suggestions if available
-  const suggestions = await getFuzzyGlobalSuggestions(productName);
+  // 3️⃣ No match — return suggestions
+  const suggestions = await smartMatchGlobalProduct(productName);
   if (suggestions.length > 0) {
     return {
       productId: '',
@@ -317,11 +309,12 @@ export const parseVoiceTranscript = async (
       quantity_partial,
       isTemp: true,
       message: 'No direct match. Did you mean one of these?',
-      suggestions,
+      suggestions: globalMatches.map(p => `${p.brand}${p.variant ? ' ' + p.variant : ''}`),
+
     };
   }
 
-  // 4️⃣ No matches — create a temporary product for this user
+  // 4️⃣ Still no match — save as temp product
   const tempProduct = new ProductModel({
     userId,
     brand: productName,

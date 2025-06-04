@@ -115,7 +115,7 @@ router.post(SESSION_PARSE_VOICE_PREFIX,
   restrictIfUnpaid,
   parseVoiceInput);
 
-  /**
+ /**
  * @swagger
  * /v1.0.0/session/{id}/voice-add:
  *   post:
@@ -147,7 +147,19 @@ router.post(SESSION_PARSE_VOICE_PREFIX,
  *       200:
  *         description: Item successfully parsed and added/updated in session
  *       400:
- *         description: Invalid request or missing transcript
+ *         description: No matching product found or invalid transcript
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No valid product found. Please review suggestions."
+ *                 suggestions:
+ *                   type: array
+ *                   items:
+ *                     type: string
  *       401:
  *         description: Unauthorized
  *       404:
