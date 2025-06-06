@@ -1,8 +1,7 @@
 // src/sessions/services/voiceService.ts
-
 import { InventorySession } from '../models/sessionModel';
-import { parseVoiceTranscript } from '../utils/voiceParserUtils';
-import { updateInventorySession } from './sessionService';
+import { parseVoiceTranscript } from '../services/sessionService';
+import { getSessionByIdService } from './sessionService';
 
 /**
  * Adds a parsed voice entry to an existing session
@@ -12,42 +11,35 @@ export const voiceAddToSessionService = async (
   sessionId: string,
   transcript: string
 ): Promise<InventorySession> => {
-  const {
-    productId,
-    quantity_full,
-    quantity_partial,
-    isTemp,
-    suggestions,
-    message,
-    brand,
-    variant,
-  } = await parseVoiceTranscript(transcript, userId);
+  const parsed = await parseVoiceTranscript(transcript, userId);
 
-  if (!productId) {
+  if (!parsed.productId) {
     throw new Error(
-      suggestions?.length
-        ? `${message} Suggestions: ${suggestions.join(', ')}`
+      parsed.suggestions?.length
+        ? `${parsed.message} Suggestions: ${parsed.suggestions.join(', ')}`
         : 'Unable to identify product from speech.'
     );
   }
+   console.log('🧪 parsed.brand:', parsed.brand);
+console.log('🧪 parsed.variant:', parsed.variant);
+console.log('🧪 parsed.quantity_full:', parsed.quantity_full);
+console.log('🧪 parsed.quantity_partial:', parsed.quantity_partial);
 
-  const displayName = variant ? `${brand} ${variant}` : brand;
+  const displayName = parsed.variant ? `${parsed.brand} ${parsed.variant}` : parsed.brand;
 
-  const updatedSession = await updateInventorySession(sessionId, userId, {
-    items: [
-      {
-        productId,
-        quantity_full,
-        quantity_partial,
-        isTemp,
-        name: displayName, // 👈 inject human-readable product name
-      },
-    ],
-  });
-
-  if (!updatedSession) {
+  const session = await getSessionByIdService(sessionId, userId);
+  if (!session) {
     throw new Error('Session not found or not owned by user');
   }
 
-  return updatedSession;
+  session.items.push({
+    productId: parsed.productId,
+    quantity_full: parsed.quantity_full || 0,
+    quantity_partial: parsed.quantity_partial || 0,
+    isTemp: parsed.isTemp || false,
+    name: displayName || '',
+  });
+
+  await session.save();
+  return session;
 };

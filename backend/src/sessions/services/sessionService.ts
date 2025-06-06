@@ -6,6 +6,7 @@ import { generateTempProductId } from '../../utils/generateTempID';
 import TempProductModel from '../../superAdmin/models/tempProductModel';
 import { SessionItem } from '../models/sessionModel';
 import { extractNameAndQuantities,
+  normalizeTranscriptForParsing,
   generateMessage,
 } from '../utils/voiceParserUtils';
 import { smartMatchGlobalProduct } from '../../globalProduct/services/globalProductService';
@@ -86,10 +87,6 @@ export const createInventorySession = async (
   return savedSession;
 };
 
-// src/sessions/services/sessionService.ts
-// export const getSessionsByUser = async (userId: string) => {
-//   return await InventorySessionModel.find({ userId }).sort({ createdAt: -1 });
-// };
 export const getSessionsByUser = async (filters: Record<string, any>) => {
   return await InventorySessionModel.find(filters).sort({ createdAt: -1 });
 };
@@ -258,34 +255,33 @@ export const cloneGlobalToUser = async (
 
   return await new ProductModel(cloned).save();
 };
-// src/sessions/services/sessionService.ts (or extract to its own parser utils folder)
 
 /**
- * New voice parser with global fallback + temp logic + suggestions
+ * 1️⃣1️⃣1️⃣Parses a voice transcript and returns product match or creates a temp fallback.
  */
+// src/sessions/services/sessionService.ts
+
 /**
- * Parses a voice transcript to extract product info and quantity.
- * Follows global → user → temp fallback logic.
+ * 🎤 Robust parser: Handles voice input, matches global product, clones to user, or creates temp.
  */
 export const parseVoiceTranscript = async (
   transcript: string,
   userId: string
 ): Promise<ParseResult> => {
-  const cleaned = transcript.trim().toLowerCase().replace(/-/g, ' ');
+  const cleaned = normalizeTranscriptForParsing(transcript);
 
-  // 1️⃣ Extract product name and quantities from transcript
+  // 1️⃣ Extract product name and quantities
   const {
     productName,
     quantity_full,
     quantity_partial,
-  } = await extractNameAndQuantities(cleaned);
+  } = extractNameAndQuantities(cleaned);
 
-  // 2️⃣ Try to find an exact global product match
+  // 2️⃣ Attempt global product match
   const globalMatches = await smartMatchGlobalProduct(productName);
   if (globalMatches.length > 0) {
     const match = globalMatches[0];
 
-    // Reuse or clone a user-specific product
     const existing = await ProductModel.findOne({
       userId,
       globalProductId: match._id,
@@ -298,10 +294,13 @@ export const parseVoiceTranscript = async (
       quantity_full,
       quantity_partial,
       message: generateMessage(quantity_full, quantity_partial),
+      brand: userProduct.brand,
+      variant: userProduct.variant,
+      category: userProduct.category,
     };
   }
 
-  // 3️⃣ No match — return suggestions
+  // 3️⃣ Suggest alternatives if partial match
   const suggestions = await smartMatchGlobalProduct(productName);
   if (suggestions.length > 0) {
     return {
@@ -309,27 +308,51 @@ export const parseVoiceTranscript = async (
       quantity_full,
       quantity_partial,
       isTemp: true,
-      message: 'No direct match. Did you mean one of these?',
-      suggestions: globalMatches.map(p => `${p.brand}${p.variant ? ' ' + p.variant : ''}`),
-
+      suggestions: suggestions.map(
+        s => `${s.brand}${s.variant ? ' ' + s.variant : ''}`
+      ),
+      message: 'No exact match. Did you mean one of these?',
     };
   }
 
-  // 4️⃣ Still no match — save as temp product
-  const tempProduct = new ProductModel({
-    userId,
-    brand: productName,
-    isTemp: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-  await tempProduct.save();
+  // 4️⃣ No match at all — create temp product & log
+  try {
+    console.log('🔍 No match found. Creating temp product for:', productName);
 
-  return {
-    productId: tempProduct._id.toString(),
-    quantity_full,
-    quantity_partial,
-    isTemp: true,
-    message: 'Product saved as temp item. SuperAdmin will review it soon.',
-  };
+    const tempProduct = new ProductModel({
+      userId,
+      brand: productName,
+      category: 'Uncategorized',
+      isTemp: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const savedTemp = await tempProduct.save();
+
+    if (TempProductModel) {
+      await TempProductModel.updateOne(
+        { tempId: savedTemp._id.toString() },
+        {
+          tempId: savedTemp._id.toString(),
+          name: productName,
+          spokenBy: userId,
+          createdAt: new Date(),
+        },
+        { upsert: true }
+      );
+    }
+
+    return {
+      productId: savedTemp._id.toString(),
+      quantity_full,
+      quantity_partial,
+      isTemp: true,
+      brand: productName,
+      message: 'No match found. Product saved as temp item.',
+    };
+  } catch (error) {
+    console.error('❌ Failed to create temp product:', error);
+    throw new Error('Error saving temp product. Please try again.');
+  }
 };

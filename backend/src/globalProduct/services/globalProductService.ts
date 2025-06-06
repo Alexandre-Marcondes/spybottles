@@ -1,76 +1,116 @@
-// import GlobalProductModel, { GlobalProduct } from "../models/globalProductModel";
-
-// // Find close matches for a product name
-// export const findGlobalProductMatch = async (query: string): Promise<GlobalProduct[]> => {
-//   return GlobalProductModel.find({
-//     brand: new RegExp(query, 'i'), // fuzzy brand match
-//   }).limit(5); // or smarter search w/ weights
-// };
-
-// // Get all global products (for superAdmin)
-// export const getAllGlobalProducts = async (): Promise<GlobalProduct[]> => {
-//   return GlobalProductModel.find({});
-// };
-
-// // Add new global product (from scraper or admin tool)
-// export const addGlobalProduct = async (data: GlobalProduct) => {
-//   return new GlobalProductModel(data).save();
-// };
-
-// // Update product metadata (like region correction)
-// export const updateGlobalProduct = async (
-//   id: string,
-//   updates: Partial<GlobalProduct>
-// ) => {
-//   return GlobalProductModel.findByIdAndUpdate(id, updates, { new: true });
-// };
 // src/globalProduct/services/globalProductService.ts
-
+import fuzzysort from 'fuzzysort';
 import GlobalProductModel, { GlobalProduct } from '../models/globalProductModel';
 
-/**
- * Smart fuzzy match for voice search and admin lookup
- * - Matches brand, variant, and combined brand + variant
- */
-export const smartMatchGlobalProduct = async (
-  productName: string
-): Promise<GlobalProduct[]> => {
-  const terms = productName.trim().split(/\s+/).filter(Boolean);
-  const regex = new RegExp(terms.join('.*'), 'i'); // e.g., "Patron.*Silver"
-
-  return GlobalProductModel.find({
-    $or: [
-      { brand: regex },
-      { variant: regex },
-      {
-        $expr: {
-          $regexMatch: {
-            input: { $concat: ['$brand', ' ', '$variant'] },
-            regex: regex.source,
-            options: 'i',
-          },
-        },
-      },
-    ],
-  }).limit(5);
+const normalizeStringForMatching = (str: string): string => {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 };
 
 /**
- * Get all global products (for superAdmin panel, etc.)
+ * Attempts brand/variant splits from the back (variant priority).
+ */
+const tryVariantBrandSplit = (
+  input: string,
+  knownVariants: string[]
+): { brand: string; variant: string }[] => {
+  const words = input.split(' ');
+  const combos: { brand: string; variant: string }[] = [];
+
+  for (let i = Math.min(4, words.length - 1); i >= 1; i--) {
+    const variantCandidate = words.slice(-i).join(' ');
+    if (knownVariants.includes(variantCandidate)) {
+      const brand = words.slice(0, -i).join(' ');
+      combos.push({ brand, variant: variantCandidate });
+    }
+  }
+
+  return combos;
+};
+
+let cachedVariants: string[] | null = null;
+
+/**
+ * Fuzzy matches brand + variant combos against DB.
+ */
+export const smartMatchGlobalProduct = async (
+  input: string
+): Promise<GlobalProduct[]> => {
+  const normalizedInput = normalizeStringForMatching(input);
+
+  // 🧠 Dynamically load all variants from DB once per server boot
+  if (!cachedVariants) {
+    const allVariants = await GlobalProductModel.distinct('variant');
+    cachedVariants = allVariants
+      .filter(Boolean)
+      .map(v => normalizeStringForMatching(v));
+  }
+
+  const normalizedVariants = cachedVariants;
+  const splits = tryVariantBrandSplit(normalizedInput, normalizedVariants);
+  const products = await GlobalProductModel.find();
+
+  const scored: { product: GlobalProduct; score: number }[] = [];
+
+  for (const { brand, variant } of splits) {
+    for (const p of products) {
+      const brandScore = fuzzysort.single(
+        normalizeStringForMatching(brand),
+        normalizeStringForMatching(p.brand)
+      );
+      const variantScore = fuzzysort.single(
+        normalizeStringForMatching(variant),
+        normalizeStringForMatching(p.variant || '')
+      );
+
+      if (brandScore && variantScore) {
+        scored.push({
+          product: p,
+          score: brandScore.score + variantScore.score,
+        });
+      }
+    }
+  }
+
+  // Fallback: match full string
+  if (scored.length === 0) {
+    for (const p of products) {
+      const combined = `${p.brand} ${p.variant || ''}`;
+      const score = fuzzysort.single(
+        normalizedInput,
+        normalizeStringForMatching(combined)
+      );
+      if (score) {
+        scored.push({ product: p, score: score.score });
+      }
+    }
+  }
+
+  return scored
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 3)
+    .map(s => s.product);
+};
+
+/**
+ * Get all global products (admin panel or dev tool).
  */
 export const getAllGlobalProducts = async (): Promise<GlobalProduct[]> => {
   return GlobalProductModel.find({});
 };
 
 /**
- * Add a new global product (from admin or scraper)
+ * Add new global product.
  */
 export const addGlobalProduct = async (data: GlobalProduct) => {
   return new GlobalProductModel(data).save();
 };
 
 /**
- * Update metadata for a global product (e.g. fix region or varietal)
+ * Update existing global product.
  */
 export const updateGlobalProduct = async (
   id: string,

@@ -3,6 +3,7 @@ import {
   getAllGlobalProducts,
   addGlobalProduct,
   updateGlobalProduct,
+  smartMatchGlobalProduct,
 } from '../services/globalProductService';
 import { logger } from '../../utils/logger';
 

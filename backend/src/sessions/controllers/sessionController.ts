@@ -72,27 +72,6 @@ export const startSession = async (
   }
 };
 
-// src/sessions/controllers/sessionController.ts
-// export const getAllSessions = async (
-//   req: Request, 
-//   res: Response,
-// ): Promise<void> => {
-//   try {
-//     const userId = req.user?.userId;
-
-//     if (!userId) {
-//        res.status(401).json({ message: 'Unauthorized' });
-//        return;
-//     }
-
-//     const sessions = await getSessionsByUser(userId);
-
-//     res.status(200).json({ data: sessions });
-//   } catch (error) {
-//     console.error('Error fetching sessions:', error);
-//     res.status(500).json({ message: 'Server error' });
-//   }
-// };
 export const getAllSessions = async (
   req: Request, 
   res: Response,
@@ -157,37 +136,6 @@ export const getSessionById = async (
   }
 };
 
-// export const updateSessionById = async (
-//   req: Request,
-//   res: Response,
-// ): Promise<void> => {
-//   try {
-//     const userId = req.user?.userId;
-//     const sessionId = req.params.id;
-
-//     if (!userId) {
-//       res.status(401).json({ message: 'Unauthorized' });
-//       return;
-//     }
-
-//     const updates = req.body;
-
-//     const updatedSession = await updateInventorySession(sessionId, userId, updates);
-
-//     if (!updatedSession) {
-//       res.status(404).json({ message: 'Session not found or not owned by user' });
-//       return;
-//     }
-
-//     res.status(200).json({
-//       message: 'Session updated successfully',
-//       data: updatedSession,
-//     });
-//   } catch (error) {
-//     console.error('Error updating session:', error);
-//     res.status(500).json({ message: 'Server error updating session' });
-//   }
-// };
 export const updateSessionById = async (
   req: Request,
   res: Response,
@@ -231,37 +179,6 @@ export const updateSessionById = async (
     res.status(500).json({ message: 'Server error updating session' });
   }
 };
-
-
-/**
- * Controller to delete an inventory session by ID
- */
-// export const deleteSessionById = async (
-//   req: Request,
-//   res: Response,
-// ): Promise<void> => {
-//   try {
-//     const userId = req.user?.userId;
-//     const sessionId = req.params.id;
-
-//     if (!userId) {
-//       res.status(401).json({ message: 'Unauthorized' });
-//       return;
-//     }
-
-//     const deleted = await deleteInventorySession(sessionId, userId);
-
-//     if (!deleted) {
-//       res.status(404).json({ message: 'Session not found or not owned by user' });
-//       return;
-//     }
-
-//     res.status(200).json({ message: 'Session deleted successfully' });
-//   } catch (error) {
-//     console.error('Error deleting session:', error);
-//     res.status(500).json({ message: 'Server error deleting session' });
-//   }
-// };
 
 export const deleteSessionById = async (
   req: Request,
