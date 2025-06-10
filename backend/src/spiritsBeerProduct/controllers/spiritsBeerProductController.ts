@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ProductService } from '../services/productService';
+import { SpiritsBeerProductService } from '../services/spiritsBeerProductService';
 import { logger } from '../../utils/logger';
 
 // POST /product/add
@@ -17,7 +17,7 @@ export const addProduct = async (
   }
 
   try {
-    const savedProduct = await ProductService.create({
+    const savedProduct = await SpiritsBeerProductService.create({
       ...req.body,
       userId,
     });
@@ -47,7 +47,7 @@ export const getAllProducts = async (
   }
 
   try {
-    const products = await ProductService.getAll(userId, req.query);
+    const products = await SpiritsBeerProductService.getAll(userId, req.query);
     res.status(200).json({ data: products });
   } catch (error) {
     logger.error('Error in getAllProducts controller', { error });
@@ -70,7 +70,7 @@ export const getProductById = async (
   }
 
   try {
-    const product = await ProductService.getById(req.params.id, userId);
+    const product = await SpiritsBeerProductService.getById(req.params.id, userId);
 
     if (!product) {
       res.status(404).json({ message: 'Product not found' });
@@ -100,7 +100,7 @@ export const updateProductById = async (
   }
 
   try {
-    const updated = await ProductService.updateById(id, req.body, userId);
+    const updated = await SpiritsBeerProductService.updateById(id, req.body, userId);
 
     if (!updated) {
       res.status(404).json({ message: 'Product not found' });
@@ -133,7 +133,7 @@ export const deleteProductById = async (
   }
 
   try {
-    const deleted = await ProductService.deleteById(id, userId);
+    const deleted = await SpiritsBeerProductService.deleteById(id, userId);
 
     if (!deleted) {
       res.status(404).json({ message: 'Product not found' });
@@ -147,9 +147,10 @@ export const deleteProductById = async (
   }
 };
 
+// GET /product/search
 export const searchProducts = async (
   req: Request,
-  res: Response,
+  res: Response
 ): Promise<void> => {
   try {
     const userId = req.user?.userId;
@@ -166,7 +167,7 @@ export const searchProducts = async (
       return;
     }
 
-    const results = await ProductService.search({ userId, brand, variant });
+    const results = await SpiritsBeerProductService.search({ userId, brand, variant });
 
     res.status(200).json({ data: results });
   } catch (error) {

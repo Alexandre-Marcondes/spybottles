@@ -1,0 +1,33 @@
+// src/spiritsBeerProduct/spiritsBeerProductConstants.ts
+
+export const S_B_PRODUCT_API_VERSION = '/v1.0.0';
+
+export const S_B_PRODUCT_PREFIX = '/product';
+export const S_B_PRODUCT_ROUTE = S_B_PRODUCT_API_VERSION + S_B_PRODUCT_PREFIX;
+
+export const S_B_PRODUCT_ADD_PREFIX = '/add';
+export const S_B_PRODUCT_ADD_PATH =
+  S_B_PRODUCT_API_VERSION + S_B_PRODUCT_PREFIX + S_B_PRODUCT_ADD_PREFIX;
+
+export const S_B_PRODUCT_GET_ALL_PREFIX = '/all';
+export const S_B_PRODUCT_GET_ALL_PATH =
+  S_B_PRODUCT_API_VERSION + S_B_PRODUCT_PREFIX + S_B_PRODUCT_GET_ALL_PREFIX;
+
+export const S_B_PRODUCT_SEARCH_PREFIX = '/search';
+export const S_B_PRODUCT_SEARCH_PATH =
+  S_B_PRODUCT_API_VERSION + S_B_PRODUCT_PREFIX + S_B_PRODUCT_SEARCH_PREFIX;
+
+export const S_B_PRODUCT_GET_ONE_PREFIX = '/:id';
+export const S_B_PRODUCT_GET_ONE_PATH =
+  S_B_PRODUCT_API_VERSION + S_B_PRODUCT_PREFIX + S_B_PRODUCT_GET_ONE_PREFIX;
+
+export const S_B_PRODUCT_UPDATE_PREFIX = '/:id';
+export const S_B_PRODUCT_UPDATE_PATH =
+  S_B_PRODUCT_API_VERSION + S_B_PRODUCT_PREFIX + S_B_PRODUCT_UPDATE_PREFIX;
+
+export const S_B_PRODUCT_DELETE_PREFIX = '/:id';
+export const S_B_PRODUCT_DELETE_PATH =
+  S_B_PRODUCT_API_VERSION + S_B_PRODUCT_PREFIX + S_B_PRODUCT_DELETE_PREFIX;
+
+// Swagger grouping tag
+export const S_B_PRODUCT_TAG = 'SpiritsBeerProduct';

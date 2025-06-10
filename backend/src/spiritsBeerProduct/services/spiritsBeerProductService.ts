@@ -1,13 +1,15 @@
-import ProductModel from '../models/productModel';
+// src/spiritsBeerProduct/services/spiritsBeerProductService.ts
+
+import SpiritsBeerProductModel from '../models/SpiritsBeerModel';
 import { logger } from '../../utils/logger';
 
-export class ProductService {
+export class SpiritsBeerProductService {
   // Create a new product
   static async create(productData: any) {
-    logger.info('Creating new product', { productData });
+    logger.info('Creating new spirits/beer product', { productData });
 
     try {
-      const newProduct = await ProductModel.create(productData);
+      const newProduct = await SpiritsBeerProductModel.create(productData);
       logger.info('Product created successfully', { id: newProduct._id });
       return newProduct;
     } catch (error) {
@@ -16,17 +18,16 @@ export class ProductService {
     }
   }
 
-  // Get all products for a user, with optional filters
+  // Get all products for a user
   static async getAll(userId: string, filter: any = {}) {
-    logger.info('Fetching products', { userId, filter });
+    logger.info('Fetching all spirits/beer products', { userId, filter });
 
     try {
       const query: any = { userId };
 
       if (filter.category) query.category = filter.category;
 
-      const products = await ProductModel.find(query).sort({ createdAt: -1 });
-
+      const products = await SpiritsBeerProductModel.find(query).sort({ createdAt: -1 });
       logger.info(`Found ${products.length} products`);
       return products;
     } catch (error) {
@@ -35,19 +36,18 @@ export class ProductService {
     }
   }
 
-  // Get a single product by ID and owner
+  // Get a single product by ID and user
   static async getById(id: string, userId: string) {
     logger.info('Fetching product by ID', { id, userId });
 
     try {
-      const product = await ProductModel.findOne({ _id: id, userId });
+      const product = await SpiritsBeerProductModel.findOne({ _id: id, userId });
 
       if (!product) {
         logger.warn('Product not found', { id });
         return null;
       }
 
-      logger.info('Product found', { id });
       return product;
     } catch (error) {
       logger.error('Failed to fetch product by ID', { error });
@@ -55,18 +55,15 @@ export class ProductService {
     }
   }
 
-  // Update product by ID, scoped to owner
+  // Update product by ID
   static async updateById(id: string, updates: any, userId: string) {
-    logger.info('Updating product by ID', { id, updates, userId });
+    logger.info('Updating product', { id, updates, userId });
 
     try {
-      const updatedProduct = await ProductModel.findOneAndUpdate(
+      const updatedProduct = await SpiritsBeerProductModel.findOneAndUpdate(
         { _id: id, userId },
         updates,
-        {
-          new: true,
-          runValidators: true,
-        }
+        { new: true, runValidators: true }
       );
 
       if (!updatedProduct) {
@@ -74,7 +71,6 @@ export class ProductService {
         return null;
       }
 
-      logger.info('Product updated successfully', { id });
       return updatedProduct;
     } catch (error) {
       logger.error('Failed to update product', { error });
@@ -82,19 +78,18 @@ export class ProductService {
     }
   }
 
-  // Delete product by ID, scoped to owner
+  // Delete product by ID
   static async deleteById(id: string, userId: string) {
-    logger.info('Deleting product by ID', { id, userId });
+    logger.info('Deleting product', { id, userId });
 
     try {
-      const result = await ProductModel.findOneAndDelete({ _id: id, userId });
+      const result = await SpiritsBeerProductModel.findOneAndDelete({ _id: id, userId });
 
       if (!result) {
         logger.warn('Product not found for deletion', { id });
         return null;
       }
 
-      logger.info('Product deleted', { id });
       return result;
     } catch (error) {
       logger.error('Failed to delete product', { error });
@@ -102,7 +97,7 @@ export class ProductService {
     }
   }
 
-  // ✅ Add this inside the class
+  // Search by brand or variant
   static async search({
     userId,
     brand,
@@ -112,6 +107,8 @@ export class ProductService {
     brand?: string | string[];
     variant?: string | string[];
   }) {
+    logger.info('Searching products', { userId, brand, variant });
+
     const query: any = { userId };
 
     if (brand) {
@@ -122,6 +119,11 @@ export class ProductService {
       query.variant = { $regex: variant, $options: 'i' };
     }
 
-    return await ProductModel.find(query).limit(10);
+    try {
+      return await SpiritsBeerProductModel.find(query).limit(10);
+    } catch (error) {
+      logger.error('Failed to search products', { error });
+      throw error;
+    }
   }
 }

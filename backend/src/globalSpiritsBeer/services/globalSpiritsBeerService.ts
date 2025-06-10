@@ -1,17 +1,23 @@
-// src/globalProduct/services/globalProductService.ts
+// src/globalSpiritsBeer/services/globalSpiritsBeerService.ts
 import fuzzysort from 'fuzzysort';
-import GlobalProductModel, { GlobalProduct } from '../models/globalProductModel';
+import GlobalSpiritsBeerModel, {
+  GlobalSpiritsBeerProduct,
+} from '../models/globalSpiritsBeerModel';
 
+/**
+ * Normalize strings for accent-insensitive, case-insensitive matching.
+ */
 const normalizeStringForMatching = (str: string): string => {
   return str
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u0300-\u036f]/g, '') // strip accents
     .toLowerCase()
     .trim();
 };
 
 /**
- * Attempts brand/variant splits from the back (variant priority).
+ * Try to split a string like "Patron Reposado" into brand + variant.
+ * Returns possible combinations if variant is known.
  */
 const tryVariantBrandSplit = (
   input: string,
@@ -31,19 +37,21 @@ const tryVariantBrandSplit = (
   return combos;
 };
 
+// Only load variants once per boot to save DB reads
 let cachedVariants: string[] | null = null;
 
 /**
- * Fuzzy matches brand + variant combos against DB.
+ * Fuzzy matches the transcript input against global spirits/beer products.
+ * Attempts brand/variant split first, then falls back to full string match.
  */
 export const smartMatchGlobalProduct = async (
   input: string
-): Promise<GlobalProduct[]> => {
+): Promise<GlobalSpiritsBeerProduct[]> => {
   const normalizedInput = normalizeStringForMatching(input);
 
-  // 🧠 Dynamically load all variants from DB once per server boot
+  // 🧠 Cache all global variants on first run
   if (!cachedVariants) {
-    const allVariants = await GlobalProductModel.distinct('variant');
+    const allVariants = await GlobalSpiritsBeerModel.distinct('variant');
     cachedVariants = allVariants
       .filter(Boolean)
       .map(v => normalizeStringForMatching(v));
@@ -51,10 +59,11 @@ export const smartMatchGlobalProduct = async (
 
   const normalizedVariants = cachedVariants;
   const splits = tryVariantBrandSplit(normalizedInput, normalizedVariants);
-  const products = await GlobalProductModel.find();
+  const products = await GlobalSpiritsBeerModel.find();
 
-  const scored: { product: GlobalProduct; score: number }[] = [];
+  const scored: { product: GlobalSpiritsBeerProduct; score: number }[] = [];
 
+  // Brand + Variant split match scoring
   for (const { brand, variant } of splits) {
     for (const p of products) {
       const brandScore = fuzzysort.single(
@@ -75,7 +84,7 @@ export const smartMatchGlobalProduct = async (
     }
   }
 
-  // Fallback: match full string
+  // Fallback: match whole string to combined "brand variant"
   if (scored.length === 0) {
     for (const p of products) {
       const combined = `${p.brand} ${p.variant || ''}`;
@@ -89,6 +98,7 @@ export const smartMatchGlobalProduct = async (
     }
   }
 
+  // Sort best scores first (lower is better), return top 3 matches
   return scored
     .sort((a, b) => a.score - b.score)
     .slice(0, 3)
@@ -96,25 +106,25 @@ export const smartMatchGlobalProduct = async (
 };
 
 /**
- * Get all global products (admin panel or dev tool).
+ * Return all global spirits/beer products.
  */
-export const getAllGlobalProducts = async (): Promise<GlobalProduct[]> => {
-  return GlobalProductModel.find({});
+export const getAllGlobalProducts = async (): Promise<GlobalSpiritsBeerProduct[]> => {
+  return GlobalSpiritsBeerModel.find({});
 };
 
 /**
- * Add new global product.
+ * Add a new global spirits/beer product.
  */
-export const addGlobalProduct = async (data: GlobalProduct) => {
-  return new GlobalProductModel(data).save();
+export const addGlobalProduct = async (data: GlobalSpiritsBeerProduct) => {
+  return new GlobalSpiritsBeerModel(data).save();
 };
 
 /**
- * Update existing global product.
+ * Update an existing global product by ID.
  */
 export const updateGlobalProduct = async (
   id: string,
-  updates: Partial<GlobalProduct>
+  updates: Partial<GlobalSpiritsBeerProduct>
 ) => {
-  return GlobalProductModel.findByIdAndUpdate(id, updates, { new: true });
+  return GlobalSpiritsBeerModel.findByIdAndUpdate(id, updates, { new: true });
 };

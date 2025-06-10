@@ -12,20 +12,13 @@ import InventorySessionModel, { SessionStatus } from '../models/sessionModel';
 import { inventorySessionSchema } from '../validators/sessionValidator';
 import { voiceAddToSessionService } from '../services/voiceService';
 
-/**
- * Controller to start a new inventory session
- */
-export const startSession = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+// 🎯 Start a new inventory session
+export const startSession = async (req: Request, res: Response): Promise<void> => {
   try {
-    if (!req.user || !req.user.userId) {
+    if (!req.user?.userId) {
       res.status(401).json({ message: 'Unauthorized: Missing userId in token' });
       return;
     }
-    console.log('+++++++Auth:', req.headers.authorization);
-    console.log('+++++++Body:', req.body);
 
     const { error, value } = inventorySessionSchema.validate(req.body, {
       abortEarly: false,
@@ -43,12 +36,9 @@ export const startSession = async (
 
     const userId = req.user.userId;
     const { location, notes, items, sessionLabel } = value;
-
-    // 🔧 Auto-generate periodTag from current date
     const now = new Date();
-    const periodTag = now.toISOString().slice(0, 7); // "YYYY-MM"
+    const periodTag = now.toISOString().slice(0, 7);
 
-    // ✅ Build session data
     const sessionData = {
       userId,
       location,
@@ -61,46 +51,29 @@ export const startSession = async (
     };
 
     const session = await createInventorySession(sessionData);
-
-    res.status(201).json({
-      message: 'Inventory session started',
-      session,
-    });
+    res.status(201).json({ message: 'Inventory session started', session });
   } catch (error) {
     console.error('Error starting session:', error);
     res.status(500).json({ message: 'Server error starting session' });
   }
 };
 
-export const getAllSessions = async (
-  req: Request, 
-  res: Response,
-): Promise<void> => {
+// 📥 Get all sessions for the current user
+export const getAllSessions = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
-    console.log('+++++++Auth:', req.headers.authorization);
-    console.log('+++++++Body:', req.body);
-
     if (!userId) {
       res.status(401).json({ message: 'Unauthorized' });
       return;
     }
 
-    // ✅ Extract optional filters
     const { status, periodTag } = req.query;
-
     const filters: Record<string, any> = { userId };
 
-    if (status && typeof status === 'string') {
-      filters.status = status;
-    }
-
-    if (periodTag && typeof periodTag === 'string') {
-      filters.periodTag = periodTag;
-    }
+    if (typeof status === 'string') filters.status = status;
+    if (typeof periodTag === 'string') filters.periodTag = periodTag;
 
     const sessions = await getSessionsByUser(filters);
-
     res.status(200).json({ data: sessions });
   } catch (error) {
     console.error('Error fetching sessions:', error);
@@ -108,22 +81,17 @@ export const getAllSessions = async (
   }
 };
 
-
-export const getSessionById = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+// 📥 Get a single session by ID
+export const getSessionById = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const sessionId = req.params.id;
-
     if (!userId) {
       res.status(401).json({ message: 'Unauthorized' });
       return;
     }
 
     const session = await getSessionByIdService(sessionId, userId);
-
     if (!session) {
       res.status(404).json({ message: 'Session not found' });
       return;
@@ -136,25 +104,17 @@ export const getSessionById = async (
   }
 };
 
-export const updateSessionById = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+// 🛠 Update an existing session
+export const updateSessionById = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const sessionId = req.params.id;
-
     if (!userId) {
       res.status(401).json({ message: 'Unauthorized' });
       return;
     }
 
-    // 🔍 First: get the existing session
-    const existingSession = await InventorySessionModel.findOne({
-      _id: sessionId,
-      userId,
-    });
-
+    const existingSession = await InventorySessionModel.findOne({ _id: sessionId, userId });
     if (!existingSession) {
       res.status(404).json({ message: 'Session not found or not owned by user' });
       return;
@@ -165,39 +125,27 @@ export const updateSessionById = async (
       return;
     }
 
-    // 🛠 Proceed with update
     const updates = req.body;
-
     const updatedSession = await updateInventorySession(sessionId, userId, updates);
 
-    res.status(200).json({
-      message: 'Session updated successfully',
-      data: updatedSession,
-    });
+    res.status(200).json({ message: 'Session updated successfully', data: updatedSession });
   } catch (error) {
     console.error('Error updating session:', error);
     res.status(500).json({ message: 'Server error updating session' });
   }
 };
 
-export const deleteSessionById = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+// ❌ Delete a session
+export const deleteSessionById = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const sessionId = req.params.id;
-
     if (!userId) {
       res.status(401).json({ message: 'Unauthorized' });
       return;
     }
 
-    const session = await InventorySessionModel.findOne({
-      _id: sessionId,
-      userId,
-    });
-
+    const session = await InventorySessionModel.findOne({ _id: sessionId, userId });
     if (!session) {
       res.status(404).json({ message: 'Session not found or not owned by user' });
       return;
@@ -208,11 +156,7 @@ export const deleteSessionById = async (
       return;
     }
 
-    const deleted = await InventorySessionModel.deleteOne({
-      _id: sessionId,
-      userId,
-    });
-
+    const deleted = await InventorySessionModel.deleteOne({ _id: sessionId, userId });
     if (deleted.deletedCount !== 1) {
       res.status(500).json({ message: 'Failed to delete session' });
       return;
@@ -222,25 +166,20 @@ export const deleteSessionById = async (
   } catch (error) {
     console.error('Error deleting session:', error);
     res.status(500).json({ message: 'Server error deleting session' });
-    
   }
 };
 
-export const finalizeSessionById = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+// ✅ Finalize session
+export const finalizeSessionById = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const sessionId = req.params.id;
-
     if (!userId) {
       res.status(401).json({ message: 'Unauthorized' });
       return;
     }
 
     const session = await InventorySessionModel.findOne({ _id: sessionId, userId });
-
     if (!session) {
       res.status(404).json({ message: 'Session not found or not owned by user' });
       return;
@@ -255,20 +194,15 @@ export const finalizeSessionById = async (
     session.finalizedAt = new Date();
     await session.save();
 
-    res.status(200).json({
-      message: 'Session finalized successfully',
-      data: session,
-    });
+    res.status(200).json({ message: 'Session finalized successfully', data: session });
   } catch (error) {
-    console.error("❌ Finalize error:", error);
+    console.error('❌ Finalize error:', error);
     res.status(500).json({ message: 'Server error finalizing session' });
   }
 };
 
-export const exportMonthlyInventory = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+// 📤 Export sessions to Excel
+export const exportMonthlyInventory = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -278,7 +212,7 @@ export const exportMonthlyInventory = async (
 
     const periodTag = typeof req.query.periodTag === 'string'
       ? req.query.periodTag
-      : new Date().toISOString().slice(0, 7); // Default to current month
+      : new Date().toISOString().slice(0, 7);
 
     const buffer = await exportSessionsToExcel(userId, periodTag);
 
@@ -287,18 +221,12 @@ export const exportMonthlyInventory = async (
     res.status(200).end(buffer);
   } catch (error) {
     console.error('❌ Excel Export Error:', error);
-    console.error('Error exporting inventory:', error);
     res.status(500).json({ message: 'Error exporting inventory to Excel' });
   }
 };
 
-/**
- * Controller: Parse a transcript into product + quantity
- */
-export const parseVoiceInput = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+// 🗣 Parse transcript → product match + quantity
+export const parseVoiceInput = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const { transcript } = req.body;
@@ -318,24 +246,15 @@ export const parseVoiceInput = async (
       return;
     }
 
-    res.status(200).json({
-      message: 'Parsed successfully',
-      data: result,
-    });
-  } catch (error: any) {
+    res.status(200).json({ message: 'Parsed successfully', data: result });
+  } catch (error) {
     console.error('❌ Voice parsing failed:', error);
     res.status(500).json({ message: 'Server error parsing transcript' });
   }
 };
 
-
-/**
- * Controller: Parse voice and update session items
- */
-export const voiceAddToSession = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+// 🎤 Parse + insert into session
+export const voiceAddToSession = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const sessionId = req.params.id;
@@ -348,10 +267,7 @@ export const voiceAddToSession = async (
 
     const updatedSession = await voiceAddToSessionService(userId, sessionId, transcript);
 
-    res.status(200).json({
-      message: 'Item added or updated from voice input',
-      data: updatedSession,
-    });
+    res.status(200).json({ message: 'Item added or updated from voice input', data: updatedSession });
   } catch (error: any) {
     if (error.message.includes('not owned')) {
       res.status(404).json({ message: error.message });
